@@ -1,0 +1,6 @@
+[package]
+name = "printer_geo"
+version = "0.1.0"
+authors = ["Eric Trombly <etrombly@yahoo.com>"]
+
+[dependencies]
