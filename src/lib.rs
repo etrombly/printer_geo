@@ -1,3 +1,4 @@
+pub mod printer_geo{
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub struct Point3d {
     x: f32,
@@ -165,4 +166,5 @@ impl Shape {
             _ => false,
         }
     }
+}
 }
