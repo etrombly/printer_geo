@@ -39,31 +39,31 @@ impl Point3d {
         Point3d{x: x, y: y, z: z}
     }
 
-    fn sum (&self) -> f32 {
+    pub fn sum (&self) -> f32 {
        self.x + self.y + self.z
     }
 
-    fn dot (self, other: Point3d) -> f32 {
+    pub fn dot (self, other: Point3d) -> f32 {
         (self * other).sum()
     }
 
-    fn cross (&self, other: &Point3d) -> Point3d {
+    pub fn cross (&self, other: &Point3d) -> Point3d {
         Point3d::new(self.y * other.z - self.z * other.y,
                    self.z * other.x - self.x * other.z,
                    self.x * other.y - self.y * other.x)
      }
 
-     fn is_infinite(&self) -> bool {
+     pub fn is_infinite(&self) -> bool {
          self.x.is_infinite() || self.y.is_infinite() || self.z.is_infinite()
      }
 
-     fn is_nan(&self) -> bool {
+     pub fn is_nan(&self) -> bool {
         !self.is_infinite() && (self.x.is_nan() || self.y.is_nan() || self.z.is_nan())
      }
 
-    fn distance(&self, other: &Point3d) -> f32 {
+     pub fn distance(&self, other: &Point3d) -> f32 {
         ((self.x - other.x).powi(2) + (self.y - other.y).powi(2) + (self.z - other.z).powi(2)).sqrt()
-    }
+     }
 }
 
 impl Add<Point3d> for Point3d {
@@ -118,14 +118,14 @@ impl Line3d {
         }
     }
 
-    fn from_points(p1: &Point3d, p2: &Point3d) -> Line3d {
+    pub fn from_points(p1: &Point3d, p2: &Point3d) -> Line3d {
         Line3d{
             p1: *p1,
             p2: *p2,
         }
     }
 
-    fn on_line(&self, point: &Point3d) -> bool {
+    pub fn on_line(&self, point: &Point3d) -> bool {
         self.p1.distance(point) + self.p2.distance(point) == self.p1.distance(&self.p2)
     }
 
@@ -189,7 +189,7 @@ impl Plane {
 }
 
 impl Shape {
-    fn is_line(&self) ->  bool {
+    pub fn is_line(&self) ->  bool {
         match *self {
             Shape::Line3d(_) => true,
             _ => false,
