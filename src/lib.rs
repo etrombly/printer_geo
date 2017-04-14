@@ -1,4 +1,5 @@
-pub mod printer_geo{
+use std::ops::{Add, Sub, Mul};
+
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub struct Point3d {
     x: f32,
@@ -34,7 +35,7 @@ pub enum Shape {
 }
 
 impl Point3d {
-    fn new (x: f32, y: f32, z: f32) -> Point3d{
+    pub fn new (x: f32, y: f32, z: f32) -> Point3d{
         Point3d{x: x, y: y, z: z}
     }
 
@@ -42,24 +43,8 @@ impl Point3d {
        self.x + self.y + self.z
     }
 
-    fn add (&self, other: &Point3d) -> Point3d {
-        Point3d::new(self.x + other.x, self.y + other.y, self.z + other.z)
-    }
-
-    fn sub (&self, other: &Point3d) -> Point3d {
-        Point3d::new(self.x - other.x, self.y - other.y, self.z - other.z)
-    }
-
-    fn mult (&self, other: &Point3d) -> Point3d {
-        Point3d::new(self.x * other.x, self.y * other.y, self.z * other.z)
-    }
-
-    fn dot (&self, other: &Point3d) -> f32 {
-        self.mult(other).sum()
-    }
-
-    fn mult_float (&self, f: &f32) -> Point3d {
-        Point3d::new(self.x * f, self.y * f, self.z * f)
+    fn dot (self, other: Point3d) -> f32 {
+        (self * other).sum()
     }
 
     fn cross (&self, other: &Point3d) -> Point3d {
@@ -81,8 +66,52 @@ impl Point3d {
     }
 }
 
+impl Add<Point3d> for Point3d {
+    type Output = Point3d;
+
+    fn add(self, other: Point3d) -> Point3d {
+        Point3d {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z}
+    }
+}
+
+impl Sub<Point3d> for Point3d {
+    type Output = Point3d;
+
+    fn sub(self, other: Point3d) -> Point3d {
+        Point3d {
+            x: self.x - other.x,
+            y: self.y - other.y,
+            z: self.z - other.z}
+    }
+}
+
+impl Mul<Point3d> for Point3d {
+    type Output = Point3d;
+
+    fn mul(self, other: Point3d) -> Point3d {
+        Point3d {
+            x: self.x * other.x,
+            y: self.y * other.y,
+            z: self.z * other.z}
+    }
+}
+
+impl Mul<f32> for Point3d {
+    type Output = Point3d;
+
+    fn mul(self, f: f32) -> Point3d {
+        Point3d {
+            x: self.x * f,
+            y: self.y * f,
+            z: self.z * f}
+    }
+}
+
 impl Line3d {
-    fn new(p1: (f32, f32, f32), p2: (f32, f32, f32)) -> Line3d {
+    pub fn new(p1: (f32, f32, f32), p2: (f32, f32, f32)) -> Line3d {
         Line3d{
              p1: Point3d::new(p1.0, p1.1, p1.2),
              p2: Point3d::new(p2.0, p2.1, p2.2),
@@ -100,13 +129,13 @@ impl Line3d {
         self.p1.distance(point) + self.p2.distance(point) == self.p1.distance(&self.p2)
     }
 
-    fn intersect(&self, plane: &Plane) -> Option<Shape> {
-        let direction = self.p2.sub(&self.p1);
-        let orthogonal = plane.n.dot(&direction);
-        let w = self.p1.sub(&plane.p);
-        let fac = (-(plane.n.dot(&w))) / orthogonal;
-        let v = direction.mult_float(&fac);
-        let answer = self.p1.add(&v);
+    pub fn intersect(&self, plane: &Plane) -> Option<Shape> {
+        let direction = self.p2 - self.p1;
+        let orthogonal = plane.n.dot(direction);
+        let w = self.p1 - plane.p;
+        let fac = (-(plane.n.dot(w))) / orthogonal;
+        let v = direction * fac;
+        let answer = self.p1 + v;
         if answer.is_infinite() {
             None
         } else if answer.is_nan() {
@@ -118,7 +147,7 @@ impl Line3d {
 }
 
 impl Triangle3d {
-    fn new(p1: (f32, f32, f32), p2: (f32, f32, f32), p3: (f32, f32, f32)) -> Triangle3d {
+    pub fn new(p1: (f32, f32, f32), p2: (f32, f32, f32), p3: (f32, f32, f32)) -> Triangle3d {
         Triangle3d {
             p1: Point3d::new(p1.0, p1.1, p1.2),
             p2: Point3d::new(p2.0, p2.1, p2.2),
@@ -126,7 +155,7 @@ impl Triangle3d {
         }
     }
 
-    fn intersect(&self, plane: &Plane) -> Option<Shape> {
+    pub fn intersect(&self, plane: &Plane) -> Option<Shape> {
         let lines = vec![Line3d::from_points(&self.p1, &self.p2),
                          Line3d::from_points(&self.p2, &self.p3),
                          Line3d::from_points(&self.p3, &self.p1)];
@@ -151,7 +180,7 @@ impl Triangle3d {
 }
 
 impl Plane {
-    fn new(p: (f32, f32, f32), n: (f32, f32, f32)) -> Plane {
+    pub fn new(p: (f32, f32, f32), n: (f32, f32, f32)) -> Plane {
         Plane{
             p: Point3d::new(p.0, p.1, p.2),
             n: Point3d::new(n.0, n.1, n.2),
@@ -166,5 +195,4 @@ impl Shape {
             _ => false,
         }
     }
-}
 }
