@@ -1,31 +1,31 @@
 #[derive(PartialEq, Clone, Copy, Debug)]
-struct Point3d {
+pub struct Point3d {
     x: f32,
     y: f32,
     z: f32,
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
-struct Line3d {
+pub struct Line3d {
     p1: Point3d,
     p2: Point3d,
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
-struct Triangle3d {
+pub struct Triangle3d {
     p1: Point3d,
     p2: Point3d,
     p3: Point3d,
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
-struct Plane {
+pub struct Plane {
     p: Point3d,
     n: Point3d,
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
-enum Shape {
+pub enum Shape {
     Point3d(Point3d),
     Line3d(Line3d),
     Triangle3d(Triangle3d),
@@ -165,37 +165,4 @@ impl Shape {
             _ => false,
         }
     }
-}
-
-fn main() {
-    let line = Line3d::new((0.0, 0.0, 0.0), (1.0, 4.0, 2.0));
-    let plane = Plane::new((0.0, 0.0, 1.0), (0.0, 0.0, 2.0));
-    let answer = line.intersect(&plane);
-    println!("intersecting\n    {:?}", answer);
-    let line = Line3d::new((0.0, 0.0, 0.0), (2.0, 2.0, 0.0));
-    let answer = line.intersect(&plane);
-    println!("not intersecting\n    {:?}", answer);
-    let line = Line3d::new((0.0, 0.0, 1.0), (1.0, 1.0, 1.0));
-    let answer = line.intersect(&plane);
-    println!("on plane\n    {:?}", answer);
-    let triangle = Triangle3d::new((0.0, 0.0, 0.0),
-                                 (2.0, 2.0, 0.0),
-                                 (1.0, 1.0, 3.0));
-    let answer = triangle.intersect(&plane);
-    println!("triangle intersecting\n    {:?}", answer);
-    let triangle = Triangle3d::new((0.0, 0.0, 1.0),
-                                 (1.0, 0.0, 1.0),
-                                 (0.0, 0.0, 0.0));
-    let answer = triangle.intersect(&plane);
-    println!("triangle line on plane\n    {:?}", answer);
-    let triangle = Triangle3d::new((0.0, 0.0, 0.0),
-                                 (1.0, 0.0, 0.0),
-                                 (0.0, 1.0, 0.0));
-    let answer = triangle.intersect(&plane);
-    println!("triangle not intersecting\n    {:?}", answer);
-    let triangle = Triangle3d::new((0.0, 0.0, 1.0),
-                                 (1.0, 0.0, 1.0),
-                                 (0.0, 1.0, 1.0));
-    let answer = triangle.intersect(&plane);
-    println!("triangle on plane\n    {:?}", answer);
 }
