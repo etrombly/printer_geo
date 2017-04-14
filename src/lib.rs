@@ -42,7 +42,7 @@ impl Point3d {
     }
 
     fn add (&self, other: &Point3d) -> Point3d {
-        Point::new(self.x + other.x, self.y + other.y, self.z + other.z)
+        Point3d::new(self.x + other.x, self.y + other.y, self.z + other.z)
     }
 
     fn sub (&self, other: &Point3d) -> Point3d {
