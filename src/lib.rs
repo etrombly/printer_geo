@@ -1,5 +1,10 @@
 use std::ops::{Add, Sub, Mul};
 
+pub trait Intersect<RHS = Self> {
+    type Output;
+    fn intersect(self, rhs: RHS) -> Self::Output;
+}
+
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub struct Point3d {
     x: f32,
@@ -128,8 +133,12 @@ impl Line3d {
     pub fn on_line(&self, point: &Point3d) -> bool {
         self.p1.distance(point) + self.p2.distance(point) == self.p1.distance(&self.p2)
     }
+}
 
-    pub fn intersect(&self, plane: &Plane) -> Option<Shape> {
+impl Intersect<Plane> for Line3d {
+    type Output = Option<Shape>;
+
+    fn intersect(self, plane: Plane) -> Option<Shape> {
         let direction = self.p2 - self.p1;
         let orthogonal = plane.n.dot(direction);
         let w = self.p1 - plane.p;
@@ -139,7 +148,7 @@ impl Line3d {
         if answer.is_infinite() {
             None
         } else if answer.is_nan() {
-            Some(Shape::Line3d(*self))
+            Some(Shape::Line3d(self))
         } else {
             Some(Shape::Point3d(answer))
         }
@@ -154,14 +163,18 @@ impl Triangle3d {
             p3: Point3d::new(p3.0, p3.1, p3.2),
         }
     }
+}
 
-    pub fn intersect(&self, plane: &Plane) -> Option<Shape> {
+impl Intersect<Plane> for Triangle3d {
+    type Output = Option<Shape>;
+
+    fn intersect(self, plane: Plane) -> Option<Shape> {
         let lines = vec![Line3d::from_points(&self.p1, &self.p2),
                          Line3d::from_points(&self.p2, &self.p3),
                          Line3d::from_points(&self.p3, &self.p1)];
         let mut results: Vec<Shape> = Vec::new();
         for line in lines {
-            if let Some(answer) = line.intersect(&plane) {
+            if let Some(answer) = line.intersect(plane) {
                 results.push(answer);
             }
         }
@@ -174,10 +187,11 @@ impl Triangle3d {
         match results.len() {
             0 => None,
             1 => Some(results[0]),
-            _ => Some(Shape::Triangle3d(*self)),
+            _ => Some(Shape::Triangle3d(self)),
         }
     }
 }
+
 
 impl Plane {
     pub fn new(p: (f32, f32, f32), n: (f32, f32, f32)) -> Plane {
