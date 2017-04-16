@@ -139,11 +139,13 @@ impl Intersect<Plane> for Line3d {
     fn intersect(self, plane: Plane) -> Option<Shape> {
         let direction = self.p2 - self.p1;
         let orthogonal = plane.n.dot(direction);
-        let w = self.p1 - plane.p;
-        let fac = (-(plane.n.dot(w))) / orthogonal;
+        let w = plane.p - self.p1;
+        let fac = plane.n.dot(w) / orthogonal;
         let v = direction * fac;
         let answer = self.p1 + v;
-        if answer.is_infinite() {
+        // checking for fac size handles finite lines, may want to change for ray tracing
+        if answer.is_infinite() ||
+          (fac < 0.0 || fac > 1.0) {
             None
         } else if answer.is_nan() {
             Some(Shape::Line3d(self))

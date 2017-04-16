@@ -98,7 +98,7 @@ pub fn read_stl<T: ReadBytesExt>(input: &mut T) -> Result<BinaryStlFile> {
 }
 
 fn write_point<T: WriteBytesExt>(out: &mut T, p: [f32; 3]) -> Result<()> {
-    for x in p.iter() {
+    for x in &p {
         try!(out.write_f32::<LittleEndian>(*x));
     }
     Ok(())
@@ -106,14 +106,14 @@ fn write_point<T: WriteBytesExt>(out: &mut T, p: [f32; 3]) -> Result<()> {
 
 pub fn write_stl<T: WriteBytesExt>(out: &mut T,
                                    stl: &BinaryStlFile) -> Result<()> {
-    assert!(stl.header.num_triangles as usize == stl.triangles.len());
+    assert_eq!(stl.header.num_triangles as usize, stl.triangles.len());
 
     //write the header.
     try!(out.write_all(&stl.header.header));
     try!(out.write_u32::<LittleEndian>(stl.header.num_triangles));
 
     // write all the triangles
-    for t in stl.triangles.iter() {
+    for t in &stl.triangles {
         try!(write_point(out, t.normal));
         try!(write_point(out, t.v1));
         try!(write_point(out, t.v2));
@@ -129,7 +129,6 @@ fn main() {
     let mut buf_reader = BufReader::new(file);
     let stl = read_stl(&mut buf_reader).unwrap();
     let mut triangles = Vec::new();
-    /*
     for i in 0..stl.header.num_triangles - 1{
         let i = i as usize;
         triangles.push(Triangle3d::new(
@@ -138,29 +137,8 @@ fn main() {
             (stl.triangles[i].v3[0], stl.triangles[i].v3[1], stl.triangles[i].v3[2]),
         ));
     }
-    */
-    triangles.push(Triangle3d::new(
-        (0.0, 0.0, 0.0),
-        (10.0, 0.0, 0.0),
-        (5.0, 5.0, 5.0),
-    ));
-    triangles.push(Triangle3d::new(
-        (10.0, 0.0, 0.0),
-        (10.0, 10.0, 0.0),
-        (5.0, 5.0, 5.0),
-    ));
-    triangles.push(Triangle3d::new(
-        (10.0, 10.0, 0.0),
-        (0.0, 10.0, 0.0),
-        (5.0, 5.0, 5.0),
-    ));
-    triangles.push(Triangle3d::new(
-        (0.0, 10.0, 0.0),
-        (0.0, 0.0, 0.0),
-        (5.0, 5.0, 5.0),
-    ));
 
-for i in 1..10{
+for i in 0..30{
     let plane = Plane::new((0.0, 0.0, i as f32), (0.0, 0.0, 1.0));
     let intersects: Vec<Option<Shape>> = triangles.iter().map(|x| x.intersect(plane)).collect();
     let mut lines: Vec<simplesvg::Fig> = Vec::new();
@@ -169,8 +147,8 @@ for i in 1..10{
     let mut max_x = 0.0;
     let mut max_y = 0.0;
 
-    for item in &intersects{
-        if let &Some(Shape::Line3d(line)) = item {
+    for item in &intersects {
+        if let Some(Shape::Line3d(line)) = *item {
           if line.min_x() - min_x < std::f32::EPSILON {
             min_x = line.min_x();
           }
@@ -199,7 +177,7 @@ for i in 1..10{
 
       max_x += min_x;
       max_y += min_y;
-
+/*
     for item in intersects{
         if let Some(Shape::Line3d(line)) = item {
             lines.push(simplesvg::Fig::Line(line.p1.x + min_x, line.p1.y + min_y,
@@ -209,13 +187,22 @@ for i in 1..10{
                                            .stroke_width(1.0)));
         }
     };
+*/
+    for item in intersects{
+        if let Some(Shape::Line3d(line)) = item {
+            lines.push(simplesvg::Fig::Line(line.p1.x, line.p1.y,
+                                            line.p2.x, line.p2.y)
+                                           .styled(simplesvg::Attr::default()
+                                           .stroke(simplesvg::Color(0xff, 0, 0))
+                                           .stroke_width(1.0)));
+        }
+    };
 
-    let mut f = File::create(format!("image{}.svg", i as u32)).expect("Unable to create file");
+    println!("total: {} intersecting plane at 1.0: {}", stl.header.num_triangles, lines.len());
+    println!("min_x: {} min_y: {} max_x: {} max_y: {}", min_x, min_y, max_x, max_y);
+    let mut f = File::create(format!("image{}.svg", i)).expect("Unable to create file");
     f.write_all(simplesvg::Svg(lines, max_x.trunc() as u32, max_y.trunc() as u32).to_string().as_bytes()).unwrap();
 }
-    //println!("total: {} intersecting plane at 1.0: {}", stl.header.num_triangles, lines.len());
-    //println!("min_x: {} min_y: {} max_x: {} max_y: {}", min_x, min_y, max_x, max_y);
-
     /*
     let line = Line3d::new((0.0, 0.0, 0.0), (1.0, 4.0, 2.0));
     let plane = Plane::new((0.0, 0.0, 1.0), (0.0, 0.0, 2.0));
