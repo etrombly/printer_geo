@@ -4,3 +4,6 @@ version = "0.1.0"
 authors = ["Eric Trombly <etrombly@yahoo.com>"]
 
 [dependencies]
+stl = "0.2.0"
+byteorder = "*"
+simplesvg = "0.4.0"

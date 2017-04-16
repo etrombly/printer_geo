@@ -1,42 +1,27 @@
 use std::ops::{Add, Sub, Mul};
 
+const  PRECISION: f32 = 0.001;
+
 pub trait Intersect<RHS = Self> {
     type Output;
     fn intersect(self, rhs: RHS) -> Self::Output;
 }
 
+pub trait Bounds{
+  fn bbox(self) -> Line3d;
+  fn min_x(self) -> f32;
+  fn min_y(self) -> f32;
+  fn min_z(self) -> f32;
+  fn max_x(self) -> f32;
+  fn max_y(self) -> f32;
+  fn max_z(self) -> f32;
+}
+
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub struct Point3d {
-    x: f32,
-    y: f32,
-    z: f32,
-}
-
-#[derive(PartialEq, Clone, Copy, Debug)]
-pub struct Line3d {
-    p1: Point3d,
-    p2: Point3d,
-}
-
-#[derive(PartialEq, Clone, Copy, Debug)]
-pub struct Triangle3d {
-    p1: Point3d,
-    p2: Point3d,
-    p3: Point3d,
-}
-
-#[derive(PartialEq, Clone, Copy, Debug)]
-pub struct Plane {
-    p: Point3d,
-    n: Point3d,
-}
-
-#[derive(PartialEq, Clone, Copy, Debug)]
-pub enum Shape {
-    Point3d(Point3d),
-    Line3d(Line3d),
-    Triangle3d(Triangle3d),
-    Plane(Plane),
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
 }
 
 impl Point3d {
@@ -115,6 +100,19 @@ impl Mul<f32> for Point3d {
     }
 }
 
+
+
+
+
+
+
+
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub struct Line3d {
+    pub p1: Point3d,
+    pub p2: Point3d,
+}
+
 impl Line3d {
     pub fn new(p1: (f32, f32, f32), p2: (f32, f32, f32)) -> Line3d {
         Line3d{
@@ -131,7 +129,7 @@ impl Line3d {
     }
 
     pub fn on_line(&self, point: &Point3d) -> bool {
-        self.p1.distance(point) + self.p2.distance(point) == self.p1.distance(&self.p2)
+        (self.p1.distance(point) + self.p2.distance(point)) - self.p1.distance(&self.p2) < PRECISION
     }
 }
 
@@ -152,7 +150,81 @@ impl Intersect<Plane> for Line3d {
         } else {
             Some(Shape::Point3d(answer))
         }
-    }  
+    }
+}
+
+impl Bounds for Line3d{
+  fn bbox(self) -> Line3d {
+    Line3d {
+      p1: Point3d { x: self.min_x(),
+                y: self.min_y(),
+                z: self.min_z()},
+      p2: Point3d { x: self.max_x(),
+                y: self.max_y(),
+                z: self.max_z()},
+    }
+  }
+
+  fn min_x(self) -> f32 {
+    if self.p1.x - self.p2.x < std::f32::EPSILON {
+      self.p1.x
+    } else {
+      self.p2.x
+    }
+  }
+
+  fn min_y(self) -> f32 {
+    if self.p1.y - self.p2.y < std::f32::EPSILON {
+      self.p1.y
+    } else {
+      self.p2.y
+    }
+  }
+
+  fn min_z(self) -> f32 {
+    if self.p1.z - self.p2.z < std::f32::EPSILON {
+      self.p1.z
+    } else {
+      self.p2.z
+    }
+  }
+
+  fn max_x(self) -> f32 {
+    if self.p1.x - self.p2.x > std::f32::EPSILON {
+      self.p1.x
+    } else {
+      self.p2.x
+    }
+  }
+
+  fn max_y(self) -> f32 {
+    if self.p1.y - self.p2.y > std::f32::EPSILON {
+      self.p1.y
+    } else {
+      self.p2.y
+    }
+  }
+
+  fn max_z(self) -> f32 {
+    if self.p1.z - self.p2.z > std::f32::EPSILON {
+      self.p1.z
+    } else {
+      self.p2.z
+    }
+  }
+}
+
+
+
+
+
+
+
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub struct Triangle3d {
+    pub p1: Point3d,
+    pub p2: Point3d,
+    pub p3: Point3d,
 }
 
 impl Triangle3d {
@@ -193,6 +265,18 @@ impl Intersect<Plane> for Triangle3d {
 }
 
 
+
+
+
+
+
+
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub struct Plane {
+    p: Point3d,
+    n: Point3d,
+}
+
 impl Plane {
     pub fn new(p: (f32, f32, f32), n: (f32, f32, f32)) -> Plane {
         Plane{
@@ -200,6 +284,23 @@ impl Plane {
             n: Point3d::new(n.0, n.1, n.2),
         }
     }
+}
+
+
+
+
+
+
+
+
+
+
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub enum Shape {
+    Point3d(Point3d),
+    Line3d(Line3d),
+    Triangle3d(Triangle3d),
+    Plane(Plane),
 }
 
 impl Shape {
