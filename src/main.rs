@@ -142,54 +142,17 @@ for i in 0..30{
     let plane = Plane::new((0.0, 0.0, i as f32), (0.0, 0.0, 1.0));
     let intersects: Vec<Option<Shape>> = triangles.iter().map(|x| x.intersect(plane)).collect();
     let mut lines: Vec<simplesvg::Fig> = Vec::new();
-    let mut min_x = 0.0;
-    let mut min_y = 0.0;
     let mut max_x = 0.0;
     let mut max_y = 0.0;
 
-    for item in &intersects {
+    for item in &intersects{
         if let Some(Shape::Line3d(line)) = *item {
-          if line.min_x() - min_x < std::f32::EPSILON {
-            min_x = line.min_x();
-          }
-          if line.min_y() - min_y < std::f32::EPSILON {
-            min_y = line.min_y();
-          }
           if line.max_x() - max_x > std::f32::EPSILON {
             max_x = line.max_x();
           }
           if line.max_y() - max_y > std::f32::EPSILON {
             max_y = line.max_y();
           }
-        }
-      }
-
-      if min_x < 0.0 {
-        min_x = -min_x;
-      } else {
-        min_x = 0.0;
-      }
-      if min_y < 0.0 {
-        min_y = -min_y;
-      } else {
-        min_y = 0.0;
-      }
-
-      max_x += min_x;
-      max_y += min_y;
-/*
-    for item in intersects{
-        if let Some(Shape::Line3d(line)) = item {
-            lines.push(simplesvg::Fig::Line(line.p1.x + min_x, line.p1.y + min_y,
-                                            line.p2.x + min_x, line.p2.y + min_y)
-                                           .styled(simplesvg::Attr::default()
-                                           .stroke(simplesvg::Color(0xff, 0, 0))
-                                           .stroke_width(1.0)));
-        }
-    };
-*/
-    for item in intersects{
-        if let Some(Shape::Line3d(line)) = item {
             lines.push(simplesvg::Fig::Line(line.p1.x, line.p1.y,
                                             line.p2.x, line.p2.y)
                                            .styled(simplesvg::Attr::default()
@@ -199,7 +162,7 @@ for i in 0..30{
     };
 
     println!("total: {} intersecting plane at 1.0: {}", stl.header.num_triangles, lines.len());
-    println!("min_x: {} min_y: {} max_x: {} max_y: {}", min_x, min_y, max_x, max_y);
+    println!("max_x: {} max_y: {}", max_x, max_y);
     let mut f = File::create(format!("image{}.svg", i)).expect("Unable to create file");
     f.write_all(simplesvg::Svg(lines, max_x.trunc() as u32, max_y.trunc() as u32).to_string().as_bytes()).unwrap();
 }
