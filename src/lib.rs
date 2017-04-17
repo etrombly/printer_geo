@@ -1,4 +1,5 @@
 use std::ops::{Add, Sub, Mul};
+use std::cmp::Ordering;
 
 const  PRECISION: f32 = 0.001;
 
@@ -216,7 +217,23 @@ impl Bounds for Line3d{
   }
 }
 
-
+impl PartialOrd for Line3d {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        if self.min_z() - other.min_z() < PRECISION {
+          Some(Ordering::Less)
+        } else if self.min_z() - other.min_z() > PRECISION {
+          Some(Ordering::Greater)
+        } else if self.min_x() - other.min_x() < PRECISION {
+          Some(Ordering::Less)
+        } else if self.min_x() - other.min_x() > PRECISION {
+          Some(Ordering::Greater)
+        } else if self.min_y() - other.min_y() < PRECISION {
+          Some(Ordering::Less)
+        } else {
+          Some(Ordering::Greater)
+        }
+    }
+}
 
 
 

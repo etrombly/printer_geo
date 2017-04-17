@@ -153,8 +153,8 @@ for i in 0..30{
           if line.max_y() - max_y > std::f32::EPSILON {
             max_y = line.max_y();
           }
-            lines.push(simplesvg::Fig::Line(line.p1.x, line.p1.y,
-                                            line.p2.x, line.p2.y)
+            lines.push(simplesvg::Fig::Line(line.p1.x * 100.0, line.p1.y * 100.0,
+                                            line.p2.x * 100.0, line.p2.y * 100.0)
                                            .styled(simplesvg::Attr::default()
                                            .stroke(simplesvg::Color(0xff, 0, 0))
                                            .stroke_width(1.0)));
@@ -164,9 +164,9 @@ for i in 0..30{
     println!("total: {} intersecting plane at 1.0: {}", stl.header.num_triangles, lines.len());
     println!("max_x: {} max_y: {}", max_x, max_y);
     let mut f = File::create(format!("image{}.svg", i)).expect("Unable to create file");
-    f.write_all(simplesvg::Svg(lines, max_x.trunc() as u32, max_y.trunc() as u32).to_string().as_bytes()).unwrap();
+    f.write_all(simplesvg::Svg(lines, max_x.trunc() as u32 * 100, max_y.trunc() as u32 * 100).to_string().as_bytes()).unwrap();
 }
-    /*
+
     let line = Line3d::new((0.0, 0.0, 0.0), (1.0, 4.0, 2.0));
     let plane = Plane::new((0.0, 0.0, 1.0), (0.0, 0.0, 2.0));
     let answer = line.intersect(plane);
@@ -197,5 +197,5 @@ for i in 0..30{
                                  (0.0, 1.0, 1.0));
     let answer = triangle.intersect(plane);
     println!("triangle on plane\n    {:?}", answer);
-    */
+
 }
