@@ -128,7 +128,7 @@ fn main() {
     let file = File::open("3DBenchy.stl").unwrap();
     let mut buf_reader = BufReader::new(file);
     let stl = read_stl(&mut buf_reader).unwrap();
-    
+
     let mut triangles = Vec::new();
     for i in 0..stl.header.num_triangles - 1 {
         let i = i as usize;
@@ -150,7 +150,7 @@ fn main() {
             ),
         ));
     }
-    
+
     let mut trianglesx4: Vec<Triangle3dx4> = Vec::new();
 
     let chunks = stl.triangles.chunks_exact(4);
@@ -225,6 +225,152 @@ fn main() {
         });
     }
 
+    /*
+        let mut trianglesx8: Vec<Triangle3dx8> = Vec::new();
+
+        let chunks = stl.triangles.chunks_exact(8);
+        for chunk in chunks {
+            let v1 = Point3dx8::new(
+                    [chunk[0].v1[0],
+                    chunk[1].v1[0],
+                    chunk[2].v1[0],
+                    chunk[3].v1[0],
+                    chunk[4].v1[0],
+                    chunk[5].v1[0],
+                    chunk[6].v1[0],
+                    chunk[7].v1[0],],
+                    [chunk[0].v1[1],
+                    chunk[1].v1[1],
+                    chunk[2].v1[1],
+                    chunk[3].v1[1],
+                    chunk[4].v1[1],
+                    chunk[5].v1[1],
+                    chunk[6].v1[1],
+                    chunk[7].v1[1],],
+                    [chunk[0].v1[2],
+                    chunk[1].v1[2],
+                    chunk[2].v1[2],
+                    chunk[3].v1[2],
+                    chunk[4].v1[2],
+                    chunk[5].v1[2],
+                    chunk[6].v1[2],
+                    chunk[7].v1[2],]
+            );
+
+            let v2 = Point3dx8::new(
+                [chunk[0].v2[0],
+                chunk[1].v2[0],
+                chunk[2].v2[0],
+                chunk[3].v2[0],
+                chunk[4].v2[0],
+                chunk[5].v2[0],
+                chunk[6].v2[0],
+                chunk[7].v2[0],],
+                [chunk[0].v2[1],
+                chunk[1].v2[1],
+                chunk[2].v2[1],
+                chunk[3].v2[1],
+                chunk[4].v2[1],
+                chunk[5].v2[1],
+                chunk[6].v2[1],
+                chunk[7].v2[1],],
+                [chunk[0].v2[2],
+                chunk[1].v2[2],
+                chunk[2].v2[2],
+                chunk[3].v2[2],
+                chunk[4].v2[2],
+                chunk[5].v2[2],
+                chunk[6].v2[2],
+                chunk[7].v2[2],]
+        );
+
+        let v3 = Point3dx8::new(
+            [chunk[0].v3[0],
+            chunk[1].v3[0],
+            chunk[2].v3[0],
+            chunk[3].v3[0],
+            chunk[4].v3[0],
+            chunk[5].v3[0],
+            chunk[6].v3[0],
+            chunk[7].v3[0],],
+            [chunk[0].v3[1],
+            chunk[1].v3[1],
+            chunk[2].v3[1],
+            chunk[3].v3[1],
+            chunk[4].v3[1],
+            chunk[5].v3[1],
+            chunk[6].v3[1],
+            chunk[7].v3[1],],
+            [chunk[0].v3[2],
+            chunk[1].v3[2],
+            chunk[2].v3[2],
+            chunk[3].v3[2],
+            chunk[4].v3[2],
+            chunk[5].v3[2],
+            chunk[6].v3[2],
+            chunk[7].v3[2],]
+    );
+
+            trianglesx8.push(Triangle3dx8 {
+                p1: v1,
+                p2: v2,
+                p3: v3,
+            });
+        }
+
+        for i in 0..30 {
+            let plane = Plane::new((0.0, 0.0, i as f32), (0.0, 0.0, 1.0));
+            let intersects: Vec<Option<Shape>> = trianglesx8
+                .iter()
+                .flat_map(|x| x.intersect(plane))
+                .collect();
+            let mut lines: Vec<simplesvg::Fig> = Vec::new();
+            let mut max_x = 0.0;
+            let mut max_y = 0.0;
+
+            for item in &intersects {
+                if let Some(Shape::Line3d(line)) = *item {
+                    if line.max_x() - max_x > std::f32::EPSILON {
+                        max_x = line.max_x();
+                    }
+                    if line.max_y() - max_y > std::f32::EPSILON {
+                        max_y = line.max_y();
+                    }
+                    lines.push(
+                        simplesvg::Fig::Line(
+                            line.p1.x * 100.0,
+                            line.p1.y * 100.0,
+                            line.p2.x * 100.0,
+                            line.p2.y * 100.0,
+                        )
+                        .styled(
+                            simplesvg::Attr::default()
+                                .stroke(simplesvg::Color(0xff, 0, 0))
+                                .stroke_width(1.0),
+                        ),
+                    );
+                }
+            }
+
+            //println!(
+            //    "total: {} intersecting plane at 1.0: {}",
+            //    stl.header.num_triangles,
+            //    lines.len()
+            //);
+            //println!("max_x: {} max_y: {}", max_x, max_y);
+            let mut f = File::create(format!("image_simd{}.svg", i)).expect("Unable to create file");
+            f.write_all(
+                simplesvg::Svg(
+                    lines,
+                    max_x.trunc() as u32 * 100,
+                    max_y.trunc() as u32 * 100,
+                )
+                .to_string()
+                .as_bytes(),
+            )
+            .unwrap();
+        }
+    */
     //todo: use chunks.remainder()
 
     for i in 0..30 {
@@ -279,8 +425,8 @@ fn main() {
         )
         .unwrap();
     }
-    
-    
+
+    /*
     for i in 0..30 {
         let plane = Plane::new((0.0, 0.0, i as f32), (0.0, 0.0, 1.0));
         let intersects: Vec<Option<Shape>> =
@@ -331,7 +477,7 @@ fn main() {
         )
         .unwrap();
     }
-    
+    */
     /*
     let line = Line3d::new((0.0, 0.0, 0.0), (1.0, 4.0, 2.0));
     let plane = Plane::new((0.0, 0.0, 1.0), (0.0, 0.0, 2.0));
