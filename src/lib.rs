@@ -368,6 +368,34 @@ impl Plane {
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
+pub struct Circle {
+    center: Point3d,
+    radius: f32,
+}
+
+impl Circle {
+    pub fn new(center: Point3d, radius: f32) -> Circle {
+        Circle { center, radius }
+    }
+
+    pub fn in_2d_bounds(&self, point: &Point3d) -> bool {
+        let dx = f32::abs(point.x - self.center.x);
+        let dy = f32::abs(point.y - self.center.y);
+        if dx > self.radius {
+            false
+        } else if dy > self.radius {
+            false
+        } else if dx + dy <= self.radius {
+            true
+        } else if dx.powi(2) + dy.powi(2) <= self.radius.powi(2) {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Shape {
     Point3d(Point3d),
     Line3d(Line3d),
