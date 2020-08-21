@@ -369,8 +369,8 @@ impl Plane {
 
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub struct Circle {
-    center: Point3d,
-    radius: f32,
+    pub center: Point3d,
+    pub radius: f32,
 }
 
 impl Circle {
@@ -392,6 +392,47 @@ impl Circle {
         } else {
             false
         }
+    }
+}
+
+impl Bounds for Circle {
+    fn bbox(self) -> Line3d {
+        Line3d {
+            p1: Point3d {
+                x: self.min_x(),
+                y: self.min_y(),
+                z: self.min_z(),
+            },
+            p2: Point3d {
+                x: self.max_x(),
+                y: self.max_y(),
+                z: self.max_z(),
+            },
+        }
+    }
+
+    fn min_x(self) -> f32 {
+        self.center.x - self.radius
+    }
+
+    fn min_y(self) -> f32 {
+        self.center.y - self.radius
+    }
+
+    fn min_z(self) -> f32 {
+        self.center.z
+    }
+
+    fn max_x(self) -> f32 {
+        self.center.x + self.radius
+    }
+
+    fn max_y(self) -> f32 {
+        self.center.y + self.radius
+    }
+
+    fn max_z(self) -> f32 {
+        self.center.z
     }
 }
 
