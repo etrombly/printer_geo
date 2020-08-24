@@ -7,6 +7,7 @@ use rayon::prelude::*;
 pub fn criterion_benchmark(c: &mut Criterion) {
     let stl = load_stl("3DBenchy.stl");
     let triangles = to_triangles3d(&stl);
+    let (trix8, rem) = to_trix8(&triangles);
     c.bench_function("iter bboxes", |b| {
         b.iter(|| {
             let bboxes: Vec<Line3d> = triangles.iter().map(|x| x.bbox()).collect();
@@ -25,6 +26,11 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("simd par bboxes", |b| {
         b.iter(|| {
             let bboxes: Vec<Line3d> = tri_bbox_simd_par(&triangles);
+        })
+    });
+    c.bench_function("simd trix8 bboxes", |b| {
+        b.iter(|| {
+            let bboxes: Vec<Line3d> = tri_bbox_trix(&trix8, &rem);
         })
     });
     // TODO: move this check to tests
