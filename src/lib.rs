@@ -221,6 +221,17 @@ impl Bounds for Line3d {
     }
 }
 
+impl Add<Line3d> for Line3d {
+    type Output = Line3d;
+
+    fn add(self, other: Line3d) -> Line3d {
+        Line3d {
+            p1: self.p1 + other.p1,
+            p2: self.p2 + other.p2,
+        }
+    }
+}
+
 impl PartialOrd for Line3d {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         if self.min_z() - other.min_z() < PRECISION {
