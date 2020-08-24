@@ -137,7 +137,6 @@ pub fn tri_bbox_simd(tris: &Vec<Triangle3d>) -> Vec<Line3d> {
                 });
             }
         }
-        
     }
     for tri in remainder {
         results.push(tri.bbox());
@@ -337,9 +336,9 @@ pub fn tri_bbox_trix(tris: &Vec<Triangle3dx8>, rem: &Vec<Triangle3d>) -> Vec<Lin
 }
 
 pub fn tri_bbox_trix_par(tris: &Vec<Triangle3dx8>, rem: &Vec<Triangle3d>) -> Vec<Line3d> {
-    let mut results: Vec<Line3d> = Vec::new();
-    for tri8 in tris {
-        unsafe {
+    let mut results: Vec<Line3d> = tris
+        .par_iter()
+        .flat_map(|tri8| unsafe {
             let x_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
             let y_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
             let z_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
@@ -358,15 +357,40 @@ pub fn tri_bbox_trix_par(tris: &Vec<Triangle3dx8>, rem: &Vec<Triangle3d>) -> Vec
             _mm256_store_ps(x_max_dst.as_mut_ptr() as *mut _, x_max);
             _mm256_store_ps(y_max_dst.as_mut_ptr() as *mut _, y_max);
             _mm256_store_ps(z_max_dst.as_mut_ptr() as *mut _, z_max);
-            for index in 0..8 {
-                results.push(Line3d {
-                    p1: Point3d::new(x_min_dst[index], y_min_dst[index], z_min_dst[index]),
-                    p2: Point3d::new(x_max_dst[index], y_max_dst[index], z_max_dst[index]),
-                });
-            }
-        }
-        
-    }
+            iter::once(Line3d {
+                p1: Point3d::new(x_min_dst[0], y_min_dst[0], z_min_dst[0]),
+                p2: Point3d::new(x_max_dst[0], y_max_dst[0], z_max_dst[0]),
+            })
+            .chain(iter::once(Line3d {
+                p1: Point3d::new(x_min_dst[1], y_min_dst[1], z_min_dst[1]),
+                p2: Point3d::new(x_max_dst[1], y_max_dst[1], z_max_dst[1]),
+            }))
+            .chain(iter::once(Line3d {
+                p1: Point3d::new(x_min_dst[2], y_min_dst[2], z_min_dst[2]),
+                p2: Point3d::new(x_max_dst[2], y_max_dst[2], z_max_dst[2]),
+            }))
+            .chain(iter::once(Line3d {
+                p1: Point3d::new(x_min_dst[3], y_min_dst[3], z_min_dst[3]),
+                p2: Point3d::new(x_max_dst[3], y_max_dst[3], z_max_dst[3]),
+            }))
+            .chain(iter::once(Line3d {
+                p1: Point3d::new(x_min_dst[4], y_min_dst[4], z_min_dst[4]),
+                p2: Point3d::new(x_max_dst[4], y_max_dst[4], z_max_dst[4]),
+            }))
+            .chain(iter::once(Line3d {
+                p1: Point3d::new(x_min_dst[5], y_min_dst[5], z_min_dst[5]),
+                p2: Point3d::new(x_max_dst[5], y_max_dst[5], z_max_dst[5]),
+            }))
+            .chain(iter::once(Line3d {
+                p1: Point3d::new(x_min_dst[6], y_min_dst[6], z_min_dst[6]),
+                p2: Point3d::new(x_max_dst[6], y_max_dst[6], z_max_dst[6]),
+            }))
+            .chain(iter::once(Line3d {
+                p1: Point3d::new(x_min_dst[7], y_min_dst[7], z_min_dst[7]),
+                p2: Point3d::new(x_max_dst[7], y_max_dst[7], z_max_dst[7]),
+            }))
+        })
+        .collect();
     for tri in rem {
         results.push(tri.bbox());
     }
