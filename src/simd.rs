@@ -1,4 +1,5 @@
 use crate::geo::*;
+use arrayvec::ArrayVec;
 use rayon::iter;
 use rayon::prelude::*;
 use std::arch::x86_64::*;
@@ -258,38 +259,42 @@ pub fn tri_bbox_simd_par(tris: &Vec<Triangle3d>) -> Vec<Line3d> {
             _mm256_store_ps(x_max_dst.as_mut_ptr() as *mut _, x_max);
             _mm256_store_ps(y_max_dst.as_mut_ptr() as *mut _, y_max);
             _mm256_store_ps(z_max_dst.as_mut_ptr() as *mut _, z_max);
-            iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[0], y_min_dst[0], z_min_dst[0]),
-                p2: Point3d::new(x_max_dst[0], y_max_dst[0], z_max_dst[0]),
-            })
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[1], y_min_dst[1], z_min_dst[1]),
-                p2: Point3d::new(x_max_dst[1], y_max_dst[1], z_max_dst[1]),
-            }))
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[2], y_min_dst[2], z_min_dst[2]),
-                p2: Point3d::new(x_max_dst[2], y_max_dst[2], z_max_dst[2]),
-            }))
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[3], y_min_dst[3], z_min_dst[3]),
-                p2: Point3d::new(x_max_dst[3], y_max_dst[3], z_max_dst[3]),
-            }))
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[4], y_min_dst[4], z_min_dst[4]),
-                p2: Point3d::new(x_max_dst[4], y_max_dst[4], z_max_dst[4]),
-            }))
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[5], y_min_dst[5], z_min_dst[5]),
-                p2: Point3d::new(x_max_dst[5], y_max_dst[5], z_max_dst[5]),
-            }))
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[6], y_min_dst[6], z_min_dst[6]),
-                p2: Point3d::new(x_max_dst[6], y_max_dst[6], z_max_dst[6]),
-            }))
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[7], y_min_dst[7], z_min_dst[7]),
-                p2: Point3d::new(x_max_dst[7], y_max_dst[7], z_max_dst[7]),
-            }))
+            ArrayVec::from([
+                Line3d {
+                    p1: Point3d::new(x_min_dst[0], y_min_dst[0], z_min_dst[0]),
+                    p2: Point3d::new(x_max_dst[0], y_max_dst[0], z_max_dst[0]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[1], y_min_dst[1], z_min_dst[1]),
+                    p2: Point3d::new(x_max_dst[1], y_max_dst[1], z_max_dst[1]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[2], y_min_dst[2], z_min_dst[2]),
+                    p2: Point3d::new(x_max_dst[2], y_max_dst[2], z_max_dst[2]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[3], y_min_dst[3], z_min_dst[3]),
+                    p2: Point3d::new(x_max_dst[3], y_max_dst[3], z_max_dst[3]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[4], y_min_dst[4], z_min_dst[4]),
+                    p2: Point3d::new(x_max_dst[4], y_max_dst[4], z_max_dst[4]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[5], y_min_dst[5], z_min_dst[5]),
+                    p2: Point3d::new(x_max_dst[5], y_max_dst[5], z_max_dst[5]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[6], y_min_dst[6], z_min_dst[6]),
+                    p2: Point3d::new(x_max_dst[6], y_max_dst[6], z_max_dst[6]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[7], y_min_dst[7], z_min_dst[7]),
+                    p2: Point3d::new(x_max_dst[7], y_max_dst[7], z_max_dst[7]),
+                },
+            ])
+            .into_iter()
+            .par_bridge()
         })
         .collect();
     for tri in remainder {
@@ -357,38 +362,42 @@ pub fn tri_bbox_trix_par(tris: &Vec<Triangle3dx8>, rem: &Vec<Triangle3d>) -> Vec
             _mm256_store_ps(x_max_dst.as_mut_ptr() as *mut _, x_max);
             _mm256_store_ps(y_max_dst.as_mut_ptr() as *mut _, y_max);
             _mm256_store_ps(z_max_dst.as_mut_ptr() as *mut _, z_max);
-            iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[0], y_min_dst[0], z_min_dst[0]),
-                p2: Point3d::new(x_max_dst[0], y_max_dst[0], z_max_dst[0]),
-            })
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[1], y_min_dst[1], z_min_dst[1]),
-                p2: Point3d::new(x_max_dst[1], y_max_dst[1], z_max_dst[1]),
-            }))
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[2], y_min_dst[2], z_min_dst[2]),
-                p2: Point3d::new(x_max_dst[2], y_max_dst[2], z_max_dst[2]),
-            }))
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[3], y_min_dst[3], z_min_dst[3]),
-                p2: Point3d::new(x_max_dst[3], y_max_dst[3], z_max_dst[3]),
-            }))
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[4], y_min_dst[4], z_min_dst[4]),
-                p2: Point3d::new(x_max_dst[4], y_max_dst[4], z_max_dst[4]),
-            }))
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[5], y_min_dst[5], z_min_dst[5]),
-                p2: Point3d::new(x_max_dst[5], y_max_dst[5], z_max_dst[5]),
-            }))
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[6], y_min_dst[6], z_min_dst[6]),
-                p2: Point3d::new(x_max_dst[6], y_max_dst[6], z_max_dst[6]),
-            }))
-            .chain(iter::once(Line3d {
-                p1: Point3d::new(x_min_dst[7], y_min_dst[7], z_min_dst[7]),
-                p2: Point3d::new(x_max_dst[7], y_max_dst[7], z_max_dst[7]),
-            }))
+            ArrayVec::from([
+                Line3d {
+                    p1: Point3d::new(x_min_dst[0], y_min_dst[0], z_min_dst[0]),
+                    p2: Point3d::new(x_max_dst[0], y_max_dst[0], z_max_dst[0]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[1], y_min_dst[1], z_min_dst[1]),
+                    p2: Point3d::new(x_max_dst[1], y_max_dst[1], z_max_dst[1]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[2], y_min_dst[2], z_min_dst[2]),
+                    p2: Point3d::new(x_max_dst[2], y_max_dst[2], z_max_dst[2]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[3], y_min_dst[3], z_min_dst[3]),
+                    p2: Point3d::new(x_max_dst[3], y_max_dst[3], z_max_dst[3]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[4], y_min_dst[4], z_min_dst[4]),
+                    p2: Point3d::new(x_max_dst[4], y_max_dst[4], z_max_dst[4]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[5], y_min_dst[5], z_min_dst[5]),
+                    p2: Point3d::new(x_max_dst[5], y_max_dst[5], z_max_dst[5]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[6], y_min_dst[6], z_min_dst[6]),
+                    p2: Point3d::new(x_max_dst[6], y_max_dst[6], z_max_dst[6]),
+                },
+                Line3d {
+                    p1: Point3d::new(x_min_dst[7], y_min_dst[7], z_min_dst[7]),
+                    p2: Point3d::new(x_max_dst[7], y_max_dst[7], z_max_dst[7]),
+                },
+            ])
+            .into_iter()
+            .par_bridge()
         })
         .collect();
     for tri in rem {
