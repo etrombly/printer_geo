@@ -1,8 +1,9 @@
-use printer_geo::geo::*;
-use printer_geo::util::*;
+use printer_geo::{geo::*, util::*};
 use rayon::prelude::*;
-use std::fs::File;
-use std::io::{Error, ErrorKind, Result, Write};
+use std::{
+    fs::File,
+    io::{Error, ErrorKind, Result, Write},
+};
 
 fn main() {
     let stl = load_stl("3DBenchy.stl");
@@ -41,13 +42,14 @@ fn main() {
             }
         }
 
-        //println!(
+        // println!(
         //    "total: {} intersecting plane at 1.0: {}",
         //    stl.header.num_triangles,
         //    lines.len()
         //);
-        //println!("max_x: {} max_y: {}", max_x, max_y);
-        let mut f = File::create(format!("image{}.svg", i)).expect("Unable to create file");
+        // println!("max_x: {} max_y: {}", max_x, max_y);
+        let mut f = File::create(format!("image{}.svg", i))
+            .expect("Unable to create file");
         f.write_all(
             simplesvg::Svg(
                 lines,
@@ -60,28 +62,26 @@ fn main() {
         .unwrap();
     }
 
-    /*
-    let line = Line3d::new((0.0, 0.0, 0.0), (1.0, 4.0, 2.0));
-    let plane = Plane::new((0.0, 0.0, 1.0), (0.0, 0.0, 2.0));
-    let answer = line.intersect(plane);
-    //println!("intersecting\n    {:?}", answer);
-    let line = Line3d::new((0.0, 0.0, 0.0), (2.0, 2.0, 0.0));
-    let answer = line.intersect(plane);
-    //println!("not intersecting\n    {:?}", answer);
-    let line = Line3d::new((0.0, 0.0, 1.0), (1.0, 1.0, 1.0));
-    let answer = line.intersect(plane);
-    //println!("on plane\n    {:?}", answer);
-    let triangle = Triangle3d::new((0.0, 0.0, 0.0), (2.0, 2.0, 0.0), (1.0, 1.0, 3.0));
-    let answer = triangle.intersect(plane);
-    //println!("triangle intersecting\n    {:?}", answer);
-    let triangle = Triangle3d::new((0.0, 0.0, 1.0), (1.0, 0.0, 1.0), (0.0, 0.0, 0.0));
-    let answer = triangle.intersect(plane);
-    //println!("triangle line on plane\n    {:?}", answer);
-    let triangle = Triangle3d::new((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0));
-    let answer = triangle.intersect(plane);
-    //println!("triangle not intersecting\n    {:?}", answer);
-    let triangle = Triangle3d::new((0.0, 0.0, 1.0), (1.0, 0.0, 1.0), (0.0, 1.0, 1.0));
-    let answer = triangle.intersect(plane);
-    //println!("triangle on plane\n    {:?}", answer);
-    */
+    // let line = Line3d::new((0.0, 0.0, 0.0), (1.0, 4.0, 2.0));
+    // let plane = Plane::new((0.0, 0.0, 1.0), (0.0, 0.0, 2.0));
+    // let answer = line.intersect(plane);
+    // println!("intersecting\n    {:?}", answer);
+    // let line = Line3d::new((0.0, 0.0, 0.0), (2.0, 2.0, 0.0));
+    // let answer = line.intersect(plane);
+    // println!("not intersecting\n    {:?}", answer);
+    // let line = Line3d::new((0.0, 0.0, 1.0), (1.0, 1.0, 1.0));
+    // let answer = line.intersect(plane);
+    // println!("on plane\n    {:?}", answer);
+    // let triangle = Triangle3d::new((0.0, 0.0, 0.0), (2.0, 2.0, 0.0), (1.0,
+    // 1.0, 3.0)); let answer = triangle.intersect(plane);
+    // println!("triangle intersecting\n    {:?}", answer);
+    // let triangle = Triangle3d::new((0.0, 0.0, 1.0), (1.0, 0.0, 1.0), (0.0,
+    // 0.0, 0.0)); let answer = triangle.intersect(plane);
+    // println!("triangle line on plane\n    {:?}", answer);
+    // let triangle = Triangle3d::new((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0,
+    // 1.0, 0.0)); let answer = triangle.intersect(plane);
+    // println!("triangle not intersecting\n    {:?}", answer);
+    // let triangle = Triangle3d::new((0.0, 0.0, 1.0), (1.0, 0.0, 1.0), (0.0,
+    // 1.0, 1.0)); let answer = triangle.intersect(plane);
+    // println!("triangle on plane\n    {:?}", answer);
 }

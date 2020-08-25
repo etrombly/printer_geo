@@ -1,7 +1,6 @@
 use crate::geo::*;
 use arrayvec::ArrayVec;
-use rayon::iter;
-use rayon::prelude::*;
+use rayon::{iter, prelude::*};
 use std::arch::x86_64::*;
 
 pub struct Point3dx8 {
@@ -133,8 +132,16 @@ pub fn tri_bbox_simd(tris: &Vec<Triangle3d>) -> Vec<Line3d> {
             _mm256_store_ps(z_max_dst.as_mut_ptr() as *mut _, z_max);
             for index in 0..8 {
                 results.push(Line3d {
-                    p1: Point3d::new(x_min_dst[index], y_min_dst[index], z_min_dst[index]),
-                    p2: Point3d::new(x_max_dst[index], y_max_dst[index], z_max_dst[index]),
+                    p1: Point3d::new(
+                        x_min_dst[index],
+                        y_min_dst[index],
+                        z_min_dst[index],
+                    ),
+                    p2: Point3d::new(
+                        x_max_dst[index],
+                        y_max_dst[index],
+                        z_max_dst[index],
+                    ),
                 });
             }
         }
@@ -304,16 +311,25 @@ pub fn tri_bbox_simd_par(tris: &Vec<Triangle3d>) -> Vec<Line3d> {
     results
 }
 
-pub fn tri_bbox_trix(tris: &Vec<Triangle3dx8>, rem: &Vec<Triangle3d>) -> Vec<Line3d> {
+pub fn tri_bbox_trix(
+    tris: &Vec<Triangle3dx8>,
+    rem: &Vec<Triangle3d>,
+) -> Vec<Line3d> {
     let mut results: Vec<Line3d> = Vec::new();
     for tri8 in tris {
         unsafe {
-            let x_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
-            let y_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
-            let z_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
-            let x_max = _mm256_max_ps(_mm256_max_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
-            let y_max = _mm256_max_ps(_mm256_max_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
-            let z_max = _mm256_max_ps(_mm256_max_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
+            let x_min =
+                _mm256_min_ps(_mm256_min_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
+            let y_min =
+                _mm256_min_ps(_mm256_min_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
+            let z_min =
+                _mm256_min_ps(_mm256_min_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
+            let x_max =
+                _mm256_max_ps(_mm256_max_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
+            let y_max =
+                _mm256_max_ps(_mm256_max_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
+            let z_max =
+                _mm256_max_ps(_mm256_max_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
             let mut x_min_dst = [0f32; 8];
             let mut y_min_dst = [0f32; 8];
             let mut z_min_dst = [0f32; 8];
@@ -328,8 +344,16 @@ pub fn tri_bbox_trix(tris: &Vec<Triangle3dx8>, rem: &Vec<Triangle3d>) -> Vec<Lin
             _mm256_store_ps(z_max_dst.as_mut_ptr() as *mut _, z_max);
             for index in 0..8 {
                 results.push(Line3d {
-                    p1: Point3d::new(x_min_dst[index], y_min_dst[index], z_min_dst[index]),
-                    p2: Point3d::new(x_max_dst[index], y_max_dst[index], z_max_dst[index]),
+                    p1: Point3d::new(
+                        x_min_dst[index],
+                        y_min_dst[index],
+                        z_min_dst[index],
+                    ),
+                    p2: Point3d::new(
+                        x_max_dst[index],
+                        y_max_dst[index],
+                        z_max_dst[index],
+                    ),
                 });
             }
         }
@@ -340,16 +364,25 @@ pub fn tri_bbox_trix(tris: &Vec<Triangle3dx8>, rem: &Vec<Triangle3d>) -> Vec<Lin
     results
 }
 
-pub fn tri_bbox_trix_par(tris: &Vec<Triangle3dx8>, rem: &Vec<Triangle3d>) -> Vec<Line3d> {
+pub fn tri_bbox_trix_par(
+    tris: &Vec<Triangle3dx8>,
+    rem: &Vec<Triangle3d>,
+) -> Vec<Line3d> {
     let mut results: Vec<Line3d> = tris
         .par_iter()
         .flat_map(|tri8| unsafe {
-            let x_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
-            let y_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
-            let z_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
-            let x_max = _mm256_max_ps(_mm256_max_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
-            let y_max = _mm256_max_ps(_mm256_max_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
-            let z_max = _mm256_max_ps(_mm256_max_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
+            let x_min =
+                _mm256_min_ps(_mm256_min_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
+            let y_min =
+                _mm256_min_ps(_mm256_min_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
+            let z_min =
+                _mm256_min_ps(_mm256_min_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
+            let x_max =
+                _mm256_max_ps(_mm256_max_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
+            let y_max =
+                _mm256_max_ps(_mm256_max_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
+            let z_max =
+                _mm256_max_ps(_mm256_max_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
             let mut x_min_dst = [0f32; 8];
             let mut y_min_dst = [0f32; 8];
             let mut z_min_dst = [0f32; 8];
@@ -406,7 +439,9 @@ pub fn tri_bbox_trix_par(tris: &Vec<Triangle3dx8>, rem: &Vec<Triangle3d>) -> Vec
     results
 }
 
-pub fn to_trix8(tris: &Vec<Triangle3d>) -> (Vec<Triangle3dx8>, Vec<Triangle3d>) {
+pub fn to_trix8(
+    tris: &Vec<Triangle3d>,
+) -> (Vec<Triangle3dx8>, Vec<Triangle3d>) {
     let tri_chunks = tris.chunks_exact(8);
     let remainder = tri_chunks.remainder().to_vec();
     let result = tri_chunks

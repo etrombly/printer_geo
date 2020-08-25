@@ -1,8 +1,9 @@
 use crate::geo::Triangle3d;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::fs::File;
-use std::io::BufReader;
-use std::io::{Error, ErrorKind, Result};
+use std::{
+    fs::File,
+    io::{BufReader, Error, ErrorKind, Result},
+};
 
 pub struct Triangle {
     pub normal: [f32; 3],
@@ -70,9 +71,12 @@ fn read_header<T: ReadBytesExt>(input: &mut T) -> Result<BinaryStlHeader> {
             if n == header.len() {
                 ()
             } else {
-                return Err(Error::new(ErrorKind::Other, "Couldn't read STL header"));
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    "Couldn't read STL header",
+                ));
             }
-        }
+        },
         Err(e) => return Err(e),
     };
 
@@ -103,10 +107,13 @@ fn write_point<T: WriteBytesExt>(out: &mut T, p: [f32; 3]) -> Result<()> {
     Ok(())
 }
 
-pub fn write_stl<T: WriteBytesExt>(out: &mut T, stl: &BinaryStlFile) -> Result<()> {
+pub fn write_stl<T: WriteBytesExt>(
+    out: &mut T,
+    stl: &BinaryStlFile,
+) -> Result<()> {
     assert_eq!(stl.header.num_triangles as usize, stl.triangles.len());
 
-    //write the header.
+    // write the header.
     out.write_all(&stl.header.header)?;
     out.write_u32::<LittleEndian>(stl.header.num_triangles)?;
 

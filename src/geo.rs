@@ -1,5 +1,7 @@
-use std::cmp::Ordering;
-use std::ops::{Add, Mul, Sub};
+use std::{
+    cmp::Ordering,
+    ops::{Add, Mul, Sub},
+};
 
 const PRECISION: f32 = 0.001;
 
@@ -32,25 +34,24 @@ pub struct Point3d {
 }
 
 impl Point3d {
-    pub fn new(x: f32, y: f32, z: f32) -> Point3d {
-        Point3d { x, y, z }
-    }
+    pub fn new(x: f32, y: f32, z: f32) -> Point3d { Point3d { x, y, z } }
 
-    pub fn sum(&self) -> f32 {
-        self.x + self.y + self.z
-    }
+    pub fn sum(&self) -> f32 { self.x + self.y + self.z }
 
     pub fn is_infinite(&self) -> bool {
         self.x.is_infinite() || self.y.is_infinite() || self.z.is_infinite()
     }
 
     pub fn is_nan(&self) -> bool {
-        !self.is_infinite() && (self.x.is_nan() || self.y.is_nan() || self.z.is_nan())
+        !self.is_infinite()
+            && (self.x.is_nan() || self.y.is_nan() || self.z.is_nan())
     }
 
     pub fn distance(&self, other: &Point3d) -> f32 {
-        ((self.x - other.x).powi(2) + (self.y - other.y).powi(2) + (self.z - other.z).powi(2))
-            .sqrt()
+        ((self.x - other.x).powi(2)
+            + (self.y - other.y).powi(2)
+            + (self.z - other.z).powi(2))
+        .sqrt()
     }
 }
 
@@ -58,6 +59,7 @@ impl Support<Point3d> for Point3d {
     type Output = f32;
 
     fn dot(self, other: Point3d) -> f32 {
+        //(self 
         //(self * other).sum()
         self.x
             .mul_add(other.x, self.y.mul_add(other.y, self.z * other.z))
@@ -151,11 +153,16 @@ impl Line3d {
     }
 
     pub fn on_line(&self, point: &Point3d) -> bool {
-        (self.p1.distance(point) + self.p2.distance(point)) - self.p1.distance(&self.p2) < PRECISION
+        (self.p1.distance(point) + self.p2.distance(point))
+            - self.p1.distance(&self.p2)
+            < PRECISION
     }
 
     pub fn in_2d_bounds(&self, point: &Point3d) -> bool {
-        point.x >= self.p1.x && point.x <= self.p2.x && point.y >= self.p1.y && point.y <= self.p2.y
+        point.x >= self.p1.x
+            && point.x <= self.p2.x
+            && point.y >= self.p1.y
+            && point.y <= self.p2.y
     }
 }
 
@@ -169,7 +176,8 @@ impl Intersect<Plane> for Line3d {
         let fac = plane.n.dot(w) / orthogonal;
         let v = direction * fac;
         let answer = self.p1 + v;
-        // checking for fac size handles finite lines, may want to change for ray tracing
+        // checking for fac size handles finite lines, may want to change for
+        // ray tracing
         if answer.is_infinite() || (fac < 0.0 || fac > 1.0) {
             None
         } else if answer.is_nan() {
@@ -196,29 +204,17 @@ impl Bounds for Line3d {
         }
     }
 
-    fn min_x(self) -> f32 {
-        self.p1.x.min(self.p2.x)
-    }
+    fn min_x(self) -> f32 { self.p1.x.min(self.p2.x) }
 
-    fn min_y(self) -> f32 {
-        self.p1.y.min(self.p2.y)
-    }
+    fn min_y(self) -> f32 { self.p1.y.min(self.p2.y) }
 
-    fn min_z(self) -> f32 {
-        self.p1.z.min(self.p2.z)
-    }
+    fn min_z(self) -> f32 { self.p1.z.min(self.p2.z) }
 
-    fn max_x(self) -> f32 {
-        self.p1.x.max(self.p2.x)
-    }
+    fn max_x(self) -> f32 { self.p1.x.max(self.p2.x) }
 
-    fn max_y(self) -> f32 {
-        self.p1.y.max(self.p2.y)
-    }
+    fn max_y(self) -> f32 { self.p1.y.max(self.p2.y) }
 
-    fn max_z(self) -> f32 {
-        self.p1.z.max(self.p2.z)
-    }
+    fn max_z(self) -> f32 { self.p1.z.max(self.p2.z) }
 }
 
 impl Add<Line3d> for Line3d {
@@ -258,7 +254,11 @@ pub struct Triangle3d {
 }
 
 impl Triangle3d {
-    pub fn new(p1: (f32, f32, f32), p2: (f32, f32, f32), p3: (f32, f32, f32)) -> Triangle3d {
+    pub fn new(
+        p1: (f32, f32, f32),
+        p2: (f32, f32, f32),
+        p3: (f32, f32, f32),
+    ) -> Triangle3d {
         Triangle3d {
             p1: Point3d::new(p1.0, p1.1, p1.2),
             p2: Point3d::new(p2.0, p2.1, p2.2),
@@ -267,7 +267,9 @@ impl Triangle3d {
     }
 
     pub fn in_2d_bounds(&self, bbox: &Line3d) -> bool {
-        bbox.in_2d_bounds(&self.p1) || bbox.in_2d_bounds(&self.p2) || bbox.in_2d_bounds(&self.p3)
+        bbox.in_2d_bounds(&self.p1)
+            || bbox.in_2d_bounds(&self.p2)
+            || bbox.in_2d_bounds(&self.p3)
     }
 }
 
@@ -287,7 +289,9 @@ impl Intersect<Plane> for Triangle3d {
             }
         }
         if results.len() == 2 {
-            if let (Shape::Point3d(p1), Shape::Point3d(p2)) = (results[0], results[1]) {
+            if let (Shape::Point3d(p1), Shape::Point3d(p2)) =
+                (results[0], results[1])
+            {
                 return Some(Shape::Line3d(Line3d::from_points(&p1, &p2)));
             }
         }
@@ -338,29 +342,17 @@ impl Bounds for Triangle3d {
         }
     }
 
-    fn min_x(self) -> f32 {
-        self.p1.x.min(self.p2.x).min(self.p3.x)
-    }
+    fn min_x(self) -> f32 { self.p1.x.min(self.p2.x).min(self.p3.x) }
 
-    fn min_y(self) -> f32 {
-        self.p1.y.min(self.p2.y).min(self.p3.y)
-    }
+    fn min_y(self) -> f32 { self.p1.y.min(self.p2.y).min(self.p3.y) }
 
-    fn min_z(self) -> f32 {
-        self.p1.z.min(self.p2.z).min(self.p3.z)
-    }
+    fn min_z(self) -> f32 { self.p1.z.min(self.p2.z).min(self.p3.z) }
 
-    fn max_x(self) -> f32 {
-        self.p1.x.max(self.p2.x).max(self.p3.x)
-    }
+    fn max_x(self) -> f32 { self.p1.x.max(self.p2.x).max(self.p3.x) }
 
-    fn max_y(self) -> f32 {
-        self.p1.y.max(self.p2.y).max(self.p3.y)
-    }
+    fn max_y(self) -> f32 { self.p1.y.max(self.p2.y).max(self.p3.y) }
 
-    fn max_z(self) -> f32 {
-        self.p1.z.max(self.p2.z).max(self.p3.z)
-    }
+    fn max_z(self) -> f32 { self.p1.z.max(self.p2.z).max(self.p3.z) }
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -422,29 +414,17 @@ impl Bounds for Circle {
         }
     }
 
-    fn min_x(self) -> f32 {
-        self.center.x - self.radius
-    }
+    fn min_x(self) -> f32 { self.center.x - self.radius }
 
-    fn min_y(self) -> f32 {
-        self.center.y - self.radius
-    }
+    fn min_y(self) -> f32 { self.center.y - self.radius }
 
-    fn min_z(self) -> f32 {
-        self.center.z
-    }
+    fn min_z(self) -> f32 { self.center.z }
 
-    fn max_x(self) -> f32 {
-        self.center.x + self.radius
-    }
+    fn max_x(self) -> f32 { self.center.x + self.radius }
 
-    fn max_y(self) -> f32 {
-        self.center.y + self.radius
-    }
+    fn max_y(self) -> f32 { self.center.y + self.radius }
 
-    fn max_z(self) -> f32 {
-        self.center.z
-    }
+    fn max_z(self) -> f32 { self.center.z }
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
