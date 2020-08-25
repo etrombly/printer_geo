@@ -1,6 +1,6 @@
 use crate::geo::*;
 use arrayvec::ArrayVec;
-use rayon::{iter, prelude::*};
+use rayon::prelude::*;
 use std::arch::x86_64::*;
 
 pub struct Point3dx8 {

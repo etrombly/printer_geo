@@ -1,5 +1,5 @@
 use crate::geo::*;
-use std::{default::Default, iter::Map, sync::Arc};
+use std::{default::Default, sync::Arc};
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer},
     command_buffer::{AutoCommandBufferBuilder, CommandBuffer},
@@ -21,24 +21,24 @@ pub struct Vk {
 }
 
 #[derive(Default, Debug, Copy, Clone)]
-pub struct Point_vk {
+pub struct PointVk {
     pub position: [f32; 3],
 }
 
-unsafe impl VertexMember for Point_vk {
+unsafe impl VertexMember for PointVk {
     fn format() -> (VertexMemberTy, usize) { (VertexMemberTy::F32, 3) }
 }
 
 #[derive(Default, Debug, Copy, Clone)]
-pub struct Triangle_vk {
-    pub p1: Point_vk,
-    pub p2: Point_vk,
-    pub p3: Point_vk,
+pub struct TriangleVk {
+    pub p1: PointVk,
+    pub p2: PointVk,
+    pub p3: PointVk,
 }
 #[derive(Default, Debug, Copy, Clone)]
-pub struct Line_vk {
-    pub p1: Point_vk,
-    pub p2: Point_vk,
+pub struct LineVk {
+    pub p1: PointVk,
+    pub p2: PointVk,
 }
 
 pub fn init_vk() -> Vk {
@@ -68,10 +68,10 @@ pub fn init_vk() -> Vk {
     Vk { device, queue }
 }
 
-pub fn compute_bbox(tris: &Vec<Triangle_vk>, vk: &Vk) -> Vec<Line3d> {
-    vulkano::impl_vertex!(Point_vk, position);
-    vulkano::impl_vertex!(Line_vk, p1, p2);
-    vulkano::impl_vertex!(Triangle_vk, p1, p2, p3);
+pub fn compute_bbox(tris: &Vec<TriangleVk>, vk: &Vk) -> Vec<Line3d> {
+    vulkano::impl_vertex!(PointVk, position);
+    vulkano::impl_vertex!(LineVk, p1, p2);
+    vulkano::impl_vertex!(TriangleVk, p1, p2, p3);
     let mut results = Vec::new();
     let shader = cs::Shader::load(vk.device.clone())
         .expect("failed to create shader module");
@@ -85,11 +85,11 @@ pub fn compute_bbox(tris: &Vec<Triangle_vk>, vk: &Vk) -> Vec<Line3d> {
     );
     let chunks = tris.chunks_exact(1024);
     println!("calculating {:?} chunks", chunks.len());
-    let dest_content = (0..tris.len()).map(|_| Line_vk {
+    let dest_content = (0..tris.len()).map(|_| LineVk {
         p1: Default::default(),
         p2: Default::default(),
     });
-    let src_content = (0..1024).map(|_| Triangle_vk {
+    let src_content = (0..1024).map(|_| TriangleVk {
         ..Default::default()
     });
 
@@ -143,30 +143,30 @@ pub fn compute_bbox(tris: &Vec<Triangle_vk>, vk: &Vk) -> Vec<Line3d> {
             .unwrap();
         let dest_content = dest.read().unwrap();
         for item in dest_content.iter() {
-            //println!("{:?}", item);
+            // println!("{:?}", item);
             results.push(to_line3d(item));
         }
     }
     results
 }
 
-pub fn to_tri_vk(tris: &Vec<Triangle3d>) -> Vec<Triangle_vk> {
+pub fn to_tri_vk(tris: &Vec<Triangle3d>) -> Vec<TriangleVk> {
     tris.iter()
-        .map(|tri| Triangle_vk {
-            p1: Point_vk {
+        .map(|tri| TriangleVk {
+            p1: PointVk {
                 position: [tri.p1.x, tri.p1.y, tri.p1.z],
             },
-            p2: Point_vk {
+            p2: PointVk {
                 position: [tri.p2.x, tri.p2.y, tri.p2.z],
             },
-            p3: Point_vk {
+            p3: PointVk {
                 position: [tri.p3.x, tri.p3.y, tri.p3.z],
             },
         })
         .collect()
 }
 
-pub fn to_line3d(line: &Line_vk) -> Line3d {
+pub fn to_line3d(line: &LineVk) -> Line3d {
     Line3d {
         p1: Point3d::new(
             line.p1.position[0],
@@ -186,20 +186,20 @@ mod cs {
         ty: "compute",
         src: "
 #version 450
-#extension GL_EXT_nonuniform_qualifier : enable
+//#extension GL_EXT_nonuniform_qualifier : enable
 
 layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
-layout(binding = 0) buffer Triangle_vk {
+layout(binding = 0) buffer TriangleVk {
     vec3 p1;
     vec3 p2;
     vec3 p3;
-} tris[];
+} tris[1];
 
-layout(binding = 1) buffer Line_vk {
+layout(binding = 1) buffer LineVk {
     vec3 p1;
     vec3 p2;
-} lines[];
+} lines[1];
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
