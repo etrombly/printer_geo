@@ -16,17 +16,17 @@ pub struct Vk {
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
 }
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Point_vk {
     pub position: [f32; 3],
 }
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Triangle_vk {
     pub p1: Point_vk,
     pub p2: Point_vk,
     pub p3: Point_vk,
 }
-#[derive(Default)]
+#[derive(Default, Copy, Clone)]
 pub struct Line_vk {
     pub p1: Point_vk,
     pub p2: Point_vk,
@@ -74,6 +74,7 @@ pub fn compute_bbox(tris: &Vec<Triangle_vk>, vk: &Vk) -> Vec<Line3d> {
         p1: Default::default(),
         p2: Default::default(),
     });
+    let mut src_content: [Triangle_vk;1024] = [Default::default(); 1024];
 
     let layout = compute_pipeline.layout().descriptor_set_layout(0).unwrap();
     let out_layout =
@@ -82,7 +83,7 @@ pub fn compute_bbox(tris: &Vec<Triangle_vk>, vk: &Vk) -> Vec<Line3d> {
         vk.device.clone(),
         BufferUsage::all(),
         false,
-        chunk.iter(),
+        src_content.iter(),
     )
     .expect("failed to create buffer");
     let set = Arc::new(
