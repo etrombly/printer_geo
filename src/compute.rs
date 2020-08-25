@@ -16,11 +16,11 @@ pub struct Vk {
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
 }
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Send, Sync)]
 pub struct Point_vk {
     pub position: [f32; 3],
 }
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Send, Sync)]
 pub struct Triangle_vk {
     pub p1: Point_vk,
     pub p2: Point_vk,
