@@ -68,13 +68,11 @@ pub fn compute_bbox(tris: &Vec<Triangle_vk>, vk: &Vk) -> Vec<Line3d> {
         )
         .expect("failed to create compute pipeline"),
     );
-    let chunks = tris.chunks_exact(1024);
-    for chunk in chunks {
+
     let dest_content = (0..tris.len()).map(|_| Line_vk {
         p1: Default::default(),
         p2: Default::default(),
     });
-    let mut src_content: [Triangle_vk;1024] = [Default::default(); 1024];
 
     let layout = compute_pipeline.layout().descriptor_set_layout(0).unwrap();
     let out_layout =
@@ -83,7 +81,7 @@ pub fn compute_bbox(tris: &Vec<Triangle_vk>, vk: &Vk) -> Vec<Line3d> {
         vk.device.clone(),
         BufferUsage::all(),
         false,
-        src_content.iter(),
+        tris.iter(),
     )
     .expect("failed to create buffer");
     let set = Arc::new(
@@ -127,7 +125,6 @@ pub fn compute_bbox(tris: &Vec<Triangle_vk>, vk: &Vk) -> Vec<Line3d> {
         .wait(None)
         .unwrap();
     let dest_content = dest.read().unwrap();
-    }
     results
 }
 
