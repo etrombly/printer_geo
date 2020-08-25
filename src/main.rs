@@ -1,4 +1,4 @@
-use printer_geo::{geo::*, util::*};
+use printer_geo::{geo::*, util::*, compute::*};
 use rayon::prelude::*;
 use std::{
     fs::File,
@@ -9,6 +9,11 @@ fn main() {
     let stl = load_stl("3DBenchy.stl");
 
     let triangles = to_triangles3d(&stl);
+
+    let tri_vk = to_tri_vk(&triangles);
+    let vk = init_vk();
+            let bboxes: Vec<Line3d> = compute_bbox(&tri_vk, &vk);
+    println!("{:?}", bboxes);
 
     for i in 0..30 {
         let plane = Plane::new((0.0, 0.0, i as f32), (0.0, 0.0, 1.0));
