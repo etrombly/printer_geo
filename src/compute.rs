@@ -8,34 +8,34 @@ use vulkano::{
     },
     device::{Device, DeviceExtensions, Features, Queue},
     instance::{Instance, InstanceExtensions, PhysicalDevice},
-    pipeline::ComputePipeline,
+    pipeline::{
+        vertex::{VertexMember, VertexMemberTy},
+        ComputePipeline,
+    },
     sync::GpuFuture,
 };
-use vulkano::pipeline::vertex::{VertexMember, VertexMemberTy};
 
 pub struct Vk {
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 pub struct Point_vk {
     pub position: [f32; 3],
 }
 
 unsafe impl VertexMember for Point_vk {
-    fn format() -> (VertexMemberTy, usize) {
-        (VertexMemberTy::F32, 3)
-    }
+    fn format() -> (VertexMemberTy, usize) { (VertexMemberTy::F32, 3) }
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 pub struct Triangle_vk {
     pub p1: Point_vk,
     pub p2: Point_vk,
     pub p3: Point_vk,
 }
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 pub struct Line_vk {
     pub p1: Point_vk,
     pub p2: Point_vk,
@@ -55,7 +55,10 @@ pub fn init_vk() -> Vk {
         Device::new(
             physical,
             &Features::none(),
-            &DeviceExtensions{khr_storage_buffer_storage_class:true, ..DeviceExtensions::none()},
+            &DeviceExtensions {
+                khr_storage_buffer_storage_class: true,
+                ..DeviceExtensions::none()
+            },
             [(queue_family, 0.5)].iter().cloned(),
         )
         .expect("failed to create device")
@@ -82,54 +85,54 @@ pub fn compute_bbox(tris: &Vec<Triangle_vk>, vk: &Vk) -> Vec<Line3d> {
     );
     let chunks = tris.chunks_exact(1024);
     println!("calculating {:?} chunks", chunks.len());
+    let dest_content = (0..tris.len()).map(|_| Line_vk {
+        p1: Default::default(),
+        p2: Default::default(),
+    });
+    let src_content = (0..1024).map(|_| Triangle_vk {
+        ..Default::default()
+    });
+
+    let layout = compute_pipeline.layout().descriptor_set_layout(0).unwrap();
+
+    let source = CpuAccessibleBuffer::from_iter(
+        vk.device.clone(),
+        BufferUsage::all(),
+        false,
+        src_content,
+    )
+    .expect("failed to create buffer");
+
+    let dest = CpuAccessibleBuffer::from_iter(
+        vk.device.clone(),
+        BufferUsage::all(),
+        false,
+        dest_content,
+    )
+    .expect("failed to create buffer");
+    let set = Arc::new(
+        PersistentDescriptorSet::start(layout.clone())
+            .add_buffer(source.clone())
+            .unwrap()
+            .add_buffer(dest.clone())
+            .unwrap()
+            .build()
+            .unwrap(),
+    );
     for chunk in chunks {
         println!("new chunk");
-        let dest_content = (0..tris.len()).map(|_| Line_vk {
-            p1: Default::default(),
-            p2: Default::default(),
-        });
-        let src_content = (0..1024).map(|_| Triangle_vk {
-            ..Default::default()
-        });
 
-        let layout =
-            compute_pipeline.layout().descriptor_set_layout(0).unwrap();
-
-        let source = CpuAccessibleBuffer::from_iter(
-            vk.device.clone(),
-            BufferUsage::all(),
-            false,
-            src_content,
-        )
-        .expect("failed to create buffer");
         {
             let mut content = source.write().unwrap();
             for (index, item) in chunk.iter().enumerate() {
                 content[index] = *item;
             }
         }
-
-        let dest = CpuAccessibleBuffer::from_iter(
-            vk.device.clone(),
-            BufferUsage::all(),
-            false,
-            dest_content,
-        )
-        .expect("failed to create buffer");
-        let set = Arc::new(
-            PersistentDescriptorSet::start(layout.clone())
-                .add_buffer(source.clone())
-                .unwrap()
-                .add_buffer(dest.clone())
-                .unwrap()
-                .build()
-                .unwrap(),
-        );
         let mut builder =
             AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())
                 .unwrap();
         builder
-            .dispatch([1024, 1, 1], compute_pipeline.clone(), set.clone(), ())
+            .dispatch([32, 1, 1], compute_pipeline.clone(), set.clone(), ())
             .unwrap();
         let command_buffer = builder.build().unwrap();
         let finished = command_buffer.execute(vk.queue.clone()).unwrap();
@@ -140,6 +143,7 @@ pub fn compute_bbox(tris: &Vec<Triangle_vk>, vk: &Vk) -> Vec<Line3d> {
             .unwrap();
         let dest_content = dest.read().unwrap();
         for item in dest_content.iter() {
+            //println!("{:?}", item);
             results.push(to_line3d(item));
         }
     }
@@ -182,30 +186,31 @@ mod cs {
         ty: "compute",
         src: "
 #version 450
+#extension GL_EXT_nonuniform_qualifier : enable
 
-layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 layout(binding = 0) buffer Triangle_vk {
     vec3 p1;
     vec3 p2;
     vec3 p3;
-} tris;
+} tris[];
 
 layout(binding = 1) buffer Line_vk {
     vec3 p1;
     vec3 p2;
-} lines;
+} lines[];
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
-    float x_max = max(max(tris.p1.x,tris.p2.x), tris.p3.x);
-    float y_max = max(max(tris.p1.y,tris.p2.y), tris.p3.y);
-    float z_max = max(max(tris.p1.z,tris.p2.z), tris.p3.z);
-    float x_min = min(min(tris.p1.x,tris.p2.x), tris.p3.x);
-    float y_min = min(min(tris.p1.y,tris.p2.y), tris.p3.y);
-    float z_min = min(min(tris.p1.z,tris.p2.z), tris.p3.z);
-    lines.p1 = vec3(x_min, y_min, z_min);
-    lines.p2 = vec3(x_max, y_max, z_max);
+    float x_max = max(max(tris[idx].p1.x,tris[idx].p2.x), tris[idx].p3.x);
+    float y_max = max(max(tris[idx].p1.y,tris[idx].p2.y), tris[idx].p3.y);
+    float z_max = max(max(tris[idx].p1.z,tris[idx].p2.z), tris[idx].p3.z);
+    float x_min = min(min(tris[idx].p1.x,tris[idx].p2.x), tris[idx].p3.x);
+    float y_min = min(min(tris[idx].p1.y,tris[idx].p2.y), tris[idx].p3.y);
+    float z_min = min(min(tris[idx].p1.z,tris[idx].p2.z), tris[idx].p3.z);
+    lines[idx].p1 = vec3(x_min, y_min, z_min);
+    lines[idx].p2 = vec3(x_max, y_max, z_max);
 }"
     }
 }

@@ -1,4 +1,4 @@
-use printer_geo::{geo::*, util::*, compute::*};
+use printer_geo::{compute::*, geo::*, util::*};
 use rayon::prelude::*;
 use std::{
     fs::File,
@@ -12,7 +12,7 @@ fn main() {
 
     let tri_vk = to_tri_vk(&triangles);
     let vk = init_vk();
-            let bboxes: Vec<Line3d> = compute_bbox(&tri_vk, &vk);
+    let bboxes: Vec<Line3d> = compute_bbox(&tri_vk, &vk);
     println!("{:?}", bboxes);
 
     for i in 0..30 {
