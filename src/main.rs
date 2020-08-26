@@ -2,7 +2,7 @@ use printer_geo::{compute::*, geo::*, util::*};
 use rayon::prelude::*;
 use std::{
     fs::File,
-    io::{Error, ErrorKind, Result, Write},
+    io::Write,
 };
 
 fn main() {
@@ -13,7 +13,9 @@ fn main() {
     let tri_vk = to_tri_vk(&triangles);
     let vk = init_vk();
     let bboxes: Vec<Line3d> = compute_bbox(&tri_vk, &vk);
-    println!("{:?}", bboxes);
+    let bboxes2: Vec<Line3d> =
+                triangles.par_iter().map(|x| x.bbox()).collect();
+    println!("{:?}\n{:?}", bboxes[0], bboxes2[0]);
 
     for i in 0..30 {
         let plane = Plane::new((0.0, 0.0, i as f32), (0.0, 0.0, 1.0));

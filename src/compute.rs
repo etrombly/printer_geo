@@ -1,7 +1,7 @@
 use crate::geo::*;
 use std::{default::Default, sync::Arc};
 use vulkano::{
-    buffer::{BufferUsage, CpuAccessibleBuffer},
+    buffer::{BufferUsage, CpuAccessibleBuffer, ImmutableBuffer},
     command_buffer::{AutoCommandBufferBuilder, CommandBuffer},
     descriptor::{
         descriptor_set::PersistentDescriptorSet, PipelineLayoutAbstract,
@@ -83,26 +83,25 @@ pub fn compute_bbox(tris: &Vec<TriangleVk>, vk: &Vk) -> Vec<Line3d> {
         )
         .expect("failed to create compute pipeline"),
     );
-    let chunks = tris.chunks_exact(1024);
-    println!("calculating {:?} chunks", chunks.len());
     let dest_content = (0..tris.len()).map(|_| LineVk {
         p1: Default::default(),
         p2: Default::default(),
     });
-    let src_content = (0..1024).map(|_| TriangleVk {
-        ..Default::default()
-    });
 
     let layout = compute_pipeline.layout().descriptor_set_layout(0).unwrap();
 
-    let source = CpuAccessibleBuffer::from_iter(
-        vk.device.clone(),
+    let (source, source_future) = ImmutableBuffer::from_iter(
+        tris.iter().copied(),
         BufferUsage::all(),
-        false,
-        src_content,
+        vk.queue.clone(),
     )
     .expect("failed to create buffer");
 
+    source_future
+        .then_signal_fence_and_flush()
+        .unwrap()
+        .wait(None)
+        .unwrap();
     let dest = CpuAccessibleBuffer::from_iter(
         vk.device.clone(),
         BufferUsage::all(),
@@ -119,33 +118,23 @@ pub fn compute_bbox(tris: &Vec<TriangleVk>, vk: &Vk) -> Vec<Line3d> {
             .build()
             .unwrap(),
     );
-    for chunk in chunks {
-        println!("new chunk");
 
-        {
-            let mut content = source.write().unwrap();
-            for (index, item) in chunk.iter().enumerate() {
-                content[index] = *item;
-            }
-        }
-        let mut builder =
-            AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())
-                .unwrap();
-        builder
-            .dispatch([32, 1, 1], compute_pipeline.clone(), set.clone(), ())
+    let mut builder =
+        AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())
             .unwrap();
-        let command_buffer = builder.build().unwrap();
-        let finished = command_buffer.execute(vk.queue.clone()).unwrap();
-        finished
-            .then_signal_fence_and_flush()
-            .unwrap()
-            .wait(None)
-            .unwrap();
-        let dest_content = dest.read().unwrap();
-        for item in dest_content.iter() {
-            // println!("{:?}", item);
-            results.push(to_line3d(item));
-        }
+    builder
+        .dispatch([1024, 1, 1], compute_pipeline.clone(), set.clone(), ())
+        .unwrap();
+    let command_buffer = builder.build().unwrap();
+    let finished = command_buffer.execute(vk.queue.clone()).unwrap();
+    finished
+        .then_signal_fence_and_flush()
+        .unwrap()
+        .wait(None)
+        .unwrap();
+    let dest_content = dest.read().unwrap();
+    for item in dest_content.iter() {
+        results.push(to_line3d(item));
     }
     results
 }
@@ -188,29 +177,37 @@ mod cs {
 #version 450
 //#extension GL_EXT_nonuniform_qualifier : enable
 
-layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
-layout(binding = 0) buffer TriangleVk {
+struct Line {
+    vec3 p1;
+    vec3 p2;
+};
+
+struct Triangle {
     vec3 p1;
     vec3 p2;
     vec3 p3;
-} tris[1];
+};
 
-layout(binding = 1) buffer LineVk {
-    vec3 p1;
-    vec3 p2;
-} lines[1];
+layout(set = 0, binding = 0) buffer TriangleVk {
+    Triangle tri[];
+} tris;
+
+layout(set = 0, binding = 1) buffer LineVk {
+    Line line[];
+} lines;
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
-    float x_max = max(max(tris[idx].p1.x,tris[idx].p2.x), tris[idx].p3.x);
-    float y_max = max(max(tris[idx].p1.y,tris[idx].p2.y), tris[idx].p3.y);
-    float z_max = max(max(tris[idx].p1.z,tris[idx].p2.z), tris[idx].p3.z);
-    float x_min = min(min(tris[idx].p1.x,tris[idx].p2.x), tris[idx].p3.x);
-    float y_min = min(min(tris[idx].p1.y,tris[idx].p2.y), tris[idx].p3.y);
-    float z_min = min(min(tris[idx].p1.z,tris[idx].p2.z), tris[idx].p3.z);
-    lines[idx].p1 = vec3(x_min, y_min, z_min);
-    lines[idx].p2 = vec3(x_max, y_max, z_max);
+    float x_max = max(max(tris.tri[idx].p1.x,tris.tri[idx].p2.x), tris.tri[idx].p3.x);
+    float y_max = max(max(tris.tri[idx].p1.y,tris.tri[idx].p2.y), tris.tri[idx].p3.y);
+    float z_max = max(max(tris.tri[idx].p1.z,tris.tri[idx].p2.z), tris.tri[idx].p3.z);
+    float x_min = min(min(tris.tri[idx].p1.x,tris.tri[idx].p2.x), tris.tri[idx].p3.x);
+    float y_min = min(min(tris.tri[idx].p1.y,tris.tri[idx].p2.y), tris.tri[idx].p3.y);
+    float z_min = min(min(tris.tri[idx].p1.z,tris.tri[idx].p2.z), tris.tri[idx].p3.z);
+    lines.line[idx].p1 = vec3(x_min, y_min, z_min);
+    lines.line[idx].p2 = vec3(x_max, y_max, z_max);
 }"
     }
 }
