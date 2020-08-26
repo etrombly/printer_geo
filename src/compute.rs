@@ -68,11 +68,10 @@ pub fn init_vk() -> Vk {
     Vk { device, queue }
 }
 
-pub fn compute_bbox(tris: &Vec<TriangleVk>, vk: &Vk) -> Vec<Line3d> {
+pub fn compute_bbox(tris: &Vec<TriangleVk>, vk: &Vk) -> Vec<LineVk> {
     vulkano::impl_vertex!(PointVk, position);
     vulkano::impl_vertex!(LineVk, p1, p2);
     vulkano::impl_vertex!(TriangleVk, p1, p2, p3);
-    let mut results = Vec::new();
     let shader = cs::Shader::load(vk.device.clone())
         .expect("failed to create shader module");
     let compute_pipeline = Arc::new(
@@ -84,8 +83,7 @@ pub fn compute_bbox(tris: &Vec<TriangleVk>, vk: &Vk) -> Vec<Line3d> {
         .expect("failed to create compute pipeline"),
     );
     let dest_content = (0..tris.len()).map(|_| LineVk {
-        p1: Default::default(),
-        p2: Default::default(),
+        ..Default::default()
     });
 
     let layout = compute_pipeline.layout().descriptor_set_layout(0).unwrap();
@@ -133,10 +131,7 @@ pub fn compute_bbox(tris: &Vec<TriangleVk>, vk: &Vk) -> Vec<Line3d> {
         .wait(None)
         .unwrap();
     let dest_content = dest.read().unwrap();
-    for item in dest_content.iter() {
-        results.push(to_line3d(item));
-    }
-    results
+    dest_content.to_vec()
 }
 
 pub fn to_tri_vk(tris: &Vec<Triangle3d>) -> Vec<TriangleVk> {

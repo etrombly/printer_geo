@@ -10,7 +10,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let vk = init_vk();
     c.bench_function("compute bboxes", |b| {
         b.iter(|| {
-            let bboxes: Vec<Line3d> = compute_bbox(&tri_vk, &vk);
+            let bboxes: Vec<LineVk> = compute_bbox(&tri_vk, &vk);
         })
     });
     c.bench_function("iter bboxes", |b| {

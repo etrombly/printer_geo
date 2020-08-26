@@ -1,9 +1,6 @@
 use printer_geo::{compute::*, geo::*, util::*};
 use rayon::prelude::*;
-use std::{
-    fs::File,
-    io::Write,
-};
+use std::{fs::File, io::Write};
 
 fn main() {
     let stl = load_stl("3DBenchy.stl");
@@ -12,9 +9,8 @@ fn main() {
 
     let tri_vk = to_tri_vk(&triangles);
     let vk = init_vk();
-    let bboxes: Vec<Line3d> = compute_bbox(&tri_vk, &vk);
-    let bboxes2: Vec<Line3d> =
-                triangles.par_iter().map(|x| x.bbox()).collect();
+    let bboxes: Vec<LineVk> = compute_bbox(&tri_vk, &vk);
+    let bboxes2: Vec<Line3d> = triangles.par_iter().map(|x| x.bbox()).collect();
     println!("{:?}\n{:?}", bboxes[0], bboxes2[0]);
 
     for i in 0..30 {
