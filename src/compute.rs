@@ -121,7 +121,12 @@ pub fn compute_bbox(tris: &Vec<TriangleVk>, vk: &Vk) -> Vec<LineVk> {
         AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())
             .unwrap();
     builder
-        .dispatch([1024, 1, 1], compute_pipeline.clone(), set.clone(), ())
+        .dispatch(
+            [tris.len() as u32 / 128, 1, 1],
+            compute_pipeline.clone(),
+            set.clone(),
+            (),
+        )
         .unwrap();
     let command_buffer = builder.build().unwrap();
     let finished = command_buffer.execute(vk.queue.clone()).unwrap();
@@ -172,7 +177,7 @@ mod cs {
 #version 450
 //#extension GL_EXT_nonuniform_qualifier : enable
 
-layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
 struct Line {
     vec3 p1;
