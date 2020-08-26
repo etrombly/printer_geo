@@ -10,39 +10,39 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     let vk = init_vk();
     c.bench_function("compute bboxes", |b| {
         b.iter(|| {
-            let bboxes: Vec<LineVk> = compute_bbox(&tri_vk, &vk);
+            let _bboxes: Vec<LineVk> = compute_bbox(&tri_vk, &vk);
         })
     });
     c.bench_function("iter bboxes", |b| {
         b.iter(|| {
-            let bboxes: Vec<Line3d> =
+            let _bboxes: Vec<Line3d> =
                 triangles.iter().map(|x| x.bbox()).collect();
         })
     });
     c.bench_function("par_iter bboxes", |b| {
         b.iter(|| {
-            let bboxes: Vec<Line3d> =
+            let _bboxes: Vec<Line3d> =
                 triangles.par_iter().map(|x| x.bbox()).collect();
         })
     });
     c.bench_function("simd bboxes", |b| {
         b.iter(|| {
-            let bboxes: Vec<Line3d> = tri_bbox_simd(&triangles);
+            let _bboxes: Vec<Line3d> = tri_bbox_simd(&triangles);
         })
     });
     c.bench_function("simd par bboxes", |b| {
         b.iter(|| {
-            let bboxes: Vec<Line3d> = tri_bbox_simd_par(&triangles);
+            let _bboxes: Vec<Line3d> = tri_bbox_simd_par(&triangles);
         })
     });
     c.bench_function("simd trix8 bboxes", |b| {
         b.iter(|| {
-            let bboxes: Vec<Line3d> = tri_bbox_trix(&trix8, &rem);
+            let _bboxes: Vec<Line3d> = tri_bbox_trix(&trix8, &rem);
         })
     });
     c.bench_function("simd par trix8 bboxes", |b| {
         b.iter(|| {
-            let bboxes: Vec<Line3d> = tri_bbox_trix_par(&trix8, &rem);
+            let _bboxes: Vec<Line3d> = tri_bbox_trix_par(&trix8, &rem);
         })
     });
     // TODO: move this check to tests
