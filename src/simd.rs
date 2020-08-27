@@ -155,8 +155,11 @@ pub fn tri_bbox_simd(tris: &[Triangle3d]) -> Vec<Line3d> {
 pub fn tri_bbox_simd_par(tris: &[Triangle3d]) -> Vec<Line3d> {
     let tri_chunks = tris.par_chunks_exact(8);
     let remainder = tri_chunks.remainder();
-    let mut results: Vec<Line3d> = tri_chunks
-        .flat_map(|tri8| unsafe {
+    let mut results: Vec<Line3d> =
+        (0..tris.len()).map(|_| Default::default()).collect();
+    tri_chunks
+        .zip(results.par_chunks_exact_mut(8))
+        .for_each(|(tri8, slice)| unsafe {
             let x1 = _mm256_set_ps(
                 tri8[0].p1.x,
                 tri8[1].p1.x,
@@ -266,44 +269,39 @@ pub fn tri_bbox_simd_par(tris: &[Triangle3d]) -> Vec<Line3d> {
             _mm256_store_ps(x_max_dst.as_mut_ptr() as *mut _, x_max);
             _mm256_store_ps(y_max_dst.as_mut_ptr() as *mut _, y_max);
             _mm256_store_ps(z_max_dst.as_mut_ptr() as *mut _, z_max);
-            ArrayVec::from([
-                Line3d {
-                    p1: Point3d::new(x_min_dst[0], y_min_dst[0], z_min_dst[0]),
-                    p2: Point3d::new(x_max_dst[0], y_max_dst[0], z_max_dst[0]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[1], y_min_dst[1], z_min_dst[1]),
-                    p2: Point3d::new(x_max_dst[1], y_max_dst[1], z_max_dst[1]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[2], y_min_dst[2], z_min_dst[2]),
-                    p2: Point3d::new(x_max_dst[2], y_max_dst[2], z_max_dst[2]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[3], y_min_dst[3], z_min_dst[3]),
-                    p2: Point3d::new(x_max_dst[3], y_max_dst[3], z_max_dst[3]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[4], y_min_dst[4], z_min_dst[4]),
-                    p2: Point3d::new(x_max_dst[4], y_max_dst[4], z_max_dst[4]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[5], y_min_dst[5], z_min_dst[5]),
-                    p2: Point3d::new(x_max_dst[5], y_max_dst[5], z_max_dst[5]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[6], y_min_dst[6], z_min_dst[6]),
-                    p2: Point3d::new(x_max_dst[6], y_max_dst[6], z_max_dst[6]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[7], y_min_dst[7], z_min_dst[7]),
-                    p2: Point3d::new(x_max_dst[7], y_max_dst[7], z_max_dst[7]),
-                },
-            ])
-            .into_iter()
-            .par_bridge()
-        })
-        .collect();
+            slice[0] = Line3d {
+                p1: Point3d::new(x_min_dst[0], y_min_dst[0], z_min_dst[0]),
+                p2: Point3d::new(x_max_dst[0], y_max_dst[0], z_max_dst[0]),
+            };
+            slice[1] = Line3d {
+                p1: Point3d::new(x_min_dst[1], y_min_dst[1], z_min_dst[1]),
+                p2: Point3d::new(x_max_dst[1], y_max_dst[1], z_max_dst[1]),
+            };
+            slice[2] = Line3d {
+                p1: Point3d::new(x_min_dst[2], y_min_dst[2], z_min_dst[2]),
+                p2: Point3d::new(x_max_dst[2], y_max_dst[2], z_max_dst[2]),
+            };
+            slice[3] = Line3d {
+                p1: Point3d::new(x_min_dst[3], y_min_dst[3], z_min_dst[3]),
+                p2: Point3d::new(x_max_dst[3], y_max_dst[3], z_max_dst[3]),
+            };
+            slice[4] = Line3d {
+                p1: Point3d::new(x_min_dst[4], y_min_dst[4], z_min_dst[4]),
+                p2: Point3d::new(x_max_dst[4], y_max_dst[4], z_max_dst[4]),
+            };
+            slice[5] = Line3d {
+                p1: Point3d::new(x_min_dst[5], y_min_dst[5], z_min_dst[5]),
+                p2: Point3d::new(x_max_dst[5], y_max_dst[5], z_max_dst[5]),
+            };
+            slice[6] = Line3d {
+                p1: Point3d::new(x_min_dst[6], y_min_dst[6], z_min_dst[6]),
+                p2: Point3d::new(x_max_dst[6], y_max_dst[6], z_max_dst[6]),
+            };
+            slice[7] = Line3d {
+                p1: Point3d::new(x_min_dst[7], y_min_dst[7], z_min_dst[7]),
+                p2: Point3d::new(x_max_dst[7], y_max_dst[7], z_max_dst[7]),
+            };
+        });
     for tri in remainder {
         results.push(tri.bbox());
     }
@@ -311,10 +309,7 @@ pub fn tri_bbox_simd_par(tris: &[Triangle3d]) -> Vec<Line3d> {
     results
 }
 
-pub fn tri_bbox_trix(
-    tris: &[Triangle3dx8],
-    rem: &[Triangle3d],
-) -> Vec<Line3d> {
+pub fn tri_bbox_trix(tris: &[Triangle3dx8], rem: &[Triangle3d]) -> Vec<Line3d> {
     let mut results: Vec<Line3d> = Vec::new();
     for tri8 in tris {
         unsafe {
@@ -368,9 +363,11 @@ pub fn tri_bbox_trix_par(
     tris: &[Triangle3dx8],
     rem: &[Triangle3d],
 ) -> Vec<Line3d> {
-    let mut results: Vec<Line3d> = tris
-        .par_iter()
-        .flat_map(|tri8| unsafe {
+    let mut results: Vec<Line3d> =
+        (0..tris.len()).map(|_| Default::default()).collect();
+    tris.par_iter()
+        .zip(results.par_chunks_exact_mut(8))
+        .for_each(|(tri8, slice)| unsafe {
             let x_min =
                 _mm256_min_ps(_mm256_min_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
             let y_min =
@@ -395,53 +392,46 @@ pub fn tri_bbox_trix_par(
             _mm256_store_ps(x_max_dst.as_mut_ptr() as *mut _, x_max);
             _mm256_store_ps(y_max_dst.as_mut_ptr() as *mut _, y_max);
             _mm256_store_ps(z_max_dst.as_mut_ptr() as *mut _, z_max);
-            ArrayVec::from([
-                Line3d {
-                    p1: Point3d::new(x_min_dst[0], y_min_dst[0], z_min_dst[0]),
-                    p2: Point3d::new(x_max_dst[0], y_max_dst[0], z_max_dst[0]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[1], y_min_dst[1], z_min_dst[1]),
-                    p2: Point3d::new(x_max_dst[1], y_max_dst[1], z_max_dst[1]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[2], y_min_dst[2], z_min_dst[2]),
-                    p2: Point3d::new(x_max_dst[2], y_max_dst[2], z_max_dst[2]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[3], y_min_dst[3], z_min_dst[3]),
-                    p2: Point3d::new(x_max_dst[3], y_max_dst[3], z_max_dst[3]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[4], y_min_dst[4], z_min_dst[4]),
-                    p2: Point3d::new(x_max_dst[4], y_max_dst[4], z_max_dst[4]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[5], y_min_dst[5], z_min_dst[5]),
-                    p2: Point3d::new(x_max_dst[5], y_max_dst[5], z_max_dst[5]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[6], y_min_dst[6], z_min_dst[6]),
-                    p2: Point3d::new(x_max_dst[6], y_max_dst[6], z_max_dst[6]),
-                },
-                Line3d {
-                    p1: Point3d::new(x_min_dst[7], y_min_dst[7], z_min_dst[7]),
-                    p2: Point3d::new(x_max_dst[7], y_max_dst[7], z_max_dst[7]),
-                },
-            ])
-            .into_iter()
-            .par_bridge()
-        })
-        .collect();
+            slice[0] = Line3d {
+                p1: Point3d::new(x_min_dst[0], y_min_dst[0], z_min_dst[0]),
+                p2: Point3d::new(x_max_dst[0], y_max_dst[0], z_max_dst[0]),
+            };
+            slice[1] = Line3d {
+                p1: Point3d::new(x_min_dst[1], y_min_dst[1], z_min_dst[1]),
+                p2: Point3d::new(x_max_dst[1], y_max_dst[1], z_max_dst[1]),
+            };
+            slice[2] = Line3d {
+                p1: Point3d::new(x_min_dst[2], y_min_dst[2], z_min_dst[2]),
+                p2: Point3d::new(x_max_dst[2], y_max_dst[2], z_max_dst[2]),
+            };
+            slice[3] = Line3d {
+                p1: Point3d::new(x_min_dst[3], y_min_dst[3], z_min_dst[3]),
+                p2: Point3d::new(x_max_dst[3], y_max_dst[3], z_max_dst[3]),
+            };
+            slice[4] = Line3d {
+                p1: Point3d::new(x_min_dst[4], y_min_dst[4], z_min_dst[4]),
+                p2: Point3d::new(x_max_dst[4], y_max_dst[4], z_max_dst[4]),
+            };
+            slice[5] = Line3d {
+                p1: Point3d::new(x_min_dst[5], y_min_dst[5], z_min_dst[5]),
+                p2: Point3d::new(x_max_dst[5], y_max_dst[5], z_max_dst[5]),
+            };
+            slice[6] = Line3d {
+                p1: Point3d::new(x_min_dst[6], y_min_dst[6], z_min_dst[6]),
+                p2: Point3d::new(x_max_dst[6], y_max_dst[6], z_max_dst[6]),
+            };
+            slice[7] = Line3d {
+                p1: Point3d::new(x_min_dst[7], y_min_dst[7], z_min_dst[7]),
+                p2: Point3d::new(x_max_dst[7], y_max_dst[7], z_max_dst[7]),
+            };
+        });
     for tri in rem {
         results.push(tri.bbox());
     }
     results
 }
 
-pub fn to_trix8(
-    tris: &[Triangle3d],
-) -> (Vec<Triangle3dx8>, Vec<Triangle3d>) {
+pub fn to_trix8(tris: &[Triangle3d]) -> (Vec<Triangle3dx8>, Vec<Triangle3d>) {
     let tri_chunks = tris.chunks_exact(8);
     let remainder = tri_chunks.remainder().to_vec();
     let result = tri_chunks

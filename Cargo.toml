@@ -26,4 +26,3 @@ lto=true
 
 [profile.bench]
 lto=true
-opt-level=2

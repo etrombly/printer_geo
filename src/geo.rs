@@ -26,7 +26,7 @@ pub trait Bounds {
     fn max_z(self) -> f32;
 }
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Clone, Copy, Debug, Default)]
 pub struct Point3d {
     pub x: f32,
     pub y: f32,
@@ -134,7 +134,7 @@ impl Mul<Point3d> for f32 {
     }
 }
 
-#[derive(PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Clone, Copy, Debug, Default)]
 pub struct Line3d {
     pub p1: Point3d,
     pub p2: Point3d,
@@ -390,7 +390,9 @@ impl Circle {
             false
         } else if dx + dy <= self.radius {
             true
-        } else { dx.powi(2) + dy.powi(2) <= self.radius.powi(2) }
+        } else {
+            dx.powi(2) + dy.powi(2) <= self.radius.powi(2)
+        }
     }
 }
 
@@ -432,7 +434,5 @@ pub enum Shape {
 }
 
 impl Shape {
-    pub fn is_line(&self) -> bool {
-        matches!(*self, Shape::Line3d(_))
-    }
+    pub fn is_line(&self) -> bool { matches!(*self, Shape::Line3d(_)) }
 }
