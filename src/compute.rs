@@ -68,7 +68,7 @@ pub fn init_vk() -> Vk {
     Vk { device, queue }
 }
 
-pub fn compute_bbox(tris: &Vec<TriangleVk>, vk: &Vk) -> Vec<LineVk> {
+pub fn compute_bbox(tris: &[TriangleVk], vk: &Vk) -> Vec<LineVk> {
     vulkano::impl_vertex!(PointVk, position);
     vulkano::impl_vertex!(LineVk, p1, p2);
     vulkano::impl_vertex!(TriangleVk, p1, p2, p3);
@@ -109,7 +109,7 @@ pub fn compute_bbox(tris: &Vec<TriangleVk>, vk: &Vk) -> Vec<LineVk> {
     .expect("failed to create buffer");
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
-            .add_buffer(source.clone())
+            .add_buffer(source)
             .unwrap()
             .add_buffer(dest.clone())
             .unwrap()
@@ -124,7 +124,7 @@ pub fn compute_bbox(tris: &Vec<TriangleVk>, vk: &Vk) -> Vec<LineVk> {
         .dispatch(
             [tris.len() as u32 / 128, 1, 1],
             compute_pipeline.clone(),
-            set.clone(),
+            set,
             (),
         )
         .unwrap();
@@ -139,7 +139,7 @@ pub fn compute_bbox(tris: &Vec<TriangleVk>, vk: &Vk) -> Vec<LineVk> {
     dest_content.to_vec()
 }
 
-pub fn to_tri_vk(tris: &Vec<Triangle3d>) -> Vec<TriangleVk> {
+pub fn to_tri_vk(tris: &[Triangle3d]) -> Vec<TriangleVk> {
     tris.iter()
         .map(|tri| TriangleVk {
             p1: PointVk {

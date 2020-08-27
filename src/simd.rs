@@ -15,7 +15,7 @@ pub struct Triangle3dx8 {
     pub p3: Point3dx8,
 }
 
-pub fn tri_bbox_simd(tris: &Vec<Triangle3d>) -> Vec<Line3d> {
+pub fn tri_bbox_simd(tris: &[Triangle3d]) -> Vec<Line3d> {
     let mut results: Vec<Line3d> = Vec::new();
     let tri_chunks = tris.chunks_exact(8);
     let remainder = tri_chunks.remainder();
@@ -152,7 +152,7 @@ pub fn tri_bbox_simd(tris: &Vec<Triangle3d>) -> Vec<Line3d> {
     results
 }
 
-pub fn tri_bbox_simd_par(tris: &Vec<Triangle3d>) -> Vec<Line3d> {
+pub fn tri_bbox_simd_par(tris: &[Triangle3d]) -> Vec<Line3d> {
     let tri_chunks = tris.par_chunks_exact(8);
     let remainder = tri_chunks.remainder();
     let mut results: Vec<Line3d> = tri_chunks
@@ -312,8 +312,8 @@ pub fn tri_bbox_simd_par(tris: &Vec<Triangle3d>) -> Vec<Line3d> {
 }
 
 pub fn tri_bbox_trix(
-    tris: &Vec<Triangle3dx8>,
-    rem: &Vec<Triangle3d>,
+    tris: &[Triangle3dx8],
+    rem: &[Triangle3d],
 ) -> Vec<Line3d> {
     let mut results: Vec<Line3d> = Vec::new();
     for tri8 in tris {
@@ -365,8 +365,8 @@ pub fn tri_bbox_trix(
 }
 
 pub fn tri_bbox_trix_par(
-    tris: &Vec<Triangle3dx8>,
-    rem: &Vec<Triangle3d>,
+    tris: &[Triangle3dx8],
+    rem: &[Triangle3d],
 ) -> Vec<Line3d> {
     let mut results: Vec<Line3d> = tris
         .par_iter()
@@ -440,7 +440,7 @@ pub fn tri_bbox_trix_par(
 }
 
 pub fn to_trix8(
-    tris: &Vec<Triangle3d>,
+    tris: &[Triangle3d],
 ) -> (Vec<Triangle3dx8>, Vec<Triangle3d>) {
     let tri_chunks = tris.chunks_exact(8);
     let remainder = tri_chunks.remainder().to_vec();

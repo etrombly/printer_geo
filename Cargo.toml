@@ -20,3 +20,10 @@ criterion = "0.3.3"
 [[bench]]
 name = "benchmark"
 harness = false
+
+[profile.release]
+lto=true
+
+[profile.bench]
+lto=true
+opt-level=2

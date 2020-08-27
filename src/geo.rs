@@ -390,11 +390,7 @@ impl Circle {
             false
         } else if dx + dy <= self.radius {
             true
-        } else if dx.powi(2) + dy.powi(2) <= self.radius.powi(2) {
-            true
-        } else {
-            false
-        }
+        } else { dx.powi(2) + dy.powi(2) <= self.radius.powi(2) }
     }
 }
 
@@ -437,9 +433,6 @@ pub enum Shape {
 
 impl Shape {
     pub fn is_line(&self) -> bool {
-        match *self {
-            Shape::Line3d(_) => true,
-            _ => false,
-        }
+        matches!(*self, Shape::Line3d(_))
     }
 }

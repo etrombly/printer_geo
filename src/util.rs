@@ -69,7 +69,6 @@ fn read_header<T: ReadBytesExt>(input: &mut T) -> Result<BinaryStlHeader> {
     match input.read(&mut header) {
         Ok(n) => {
             if n == header.len() {
-                ()
             } else {
                 return Err(Error::new(
                     ErrorKind::Other,
