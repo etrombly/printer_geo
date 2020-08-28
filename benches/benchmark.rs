@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use printer_geo::{compute::*, geo::*, simd::*, util::*};
 use rayon::prelude::*;
 

@@ -1,5 +1,4 @@
 use crate::geo::*;
-use arrayvec::ArrayVec;
 use rayon::prelude::*;
 use std::arch::x86_64::*;
 
@@ -16,100 +15,100 @@ pub struct Triangle3dx8 {
 }
 
 pub fn tri_bbox_simd(tris: &[Triangle3d]) -> Vec<Line3d> {
-    let mut results: Vec<Line3d> = Vec::new();
+    let mut results: Vec<Line3d> = Vec::with_capacity(tris.len());
     let tri_chunks = tris.chunks_exact(8);
     let remainder = tri_chunks.remainder();
     for tri8 in tri_chunks {
         unsafe {
             let x1 = _mm256_set_ps(
-                tri8[0].p1.x,
-                tri8[1].p1.x,
-                tri8[2].p1.x,
-                tri8[3].p1.x,
-                tri8[4].p1.x,
-                tri8[5].p1.x,
-                tri8[6].p1.x,
                 tri8[7].p1.x,
+                tri8[6].p1.x,
+                tri8[5].p1.x,
+                tri8[4].p1.x,
+                tri8[3].p1.x,
+                tri8[2].p1.x,
+                tri8[1].p1.x,
+                tri8[0].p1.x,
             );
             let x2 = _mm256_set_ps(
-                tri8[0].p2.x,
-                tri8[1].p2.x,
-                tri8[2].p2.x,
-                tri8[3].p2.x,
-                tri8[4].p2.x,
-                tri8[5].p2.x,
-                tri8[6].p2.x,
                 tri8[7].p2.x,
+                tri8[6].p2.x,
+                tri8[5].p2.x,
+                tri8[4].p2.x,
+                tri8[3].p2.x,
+                tri8[2].p2.x,
+                tri8[1].p2.x,
+                tri8[0].p2.x,
             );
             let x3 = _mm256_set_ps(
-                tri8[0].p3.x,
-                tri8[1].p3.x,
-                tri8[2].p3.x,
-                tri8[3].p3.x,
-                tri8[4].p3.x,
-                tri8[5].p3.x,
-                tri8[6].p3.x,
                 tri8[7].p3.x,
+                tri8[6].p3.x,
+                tri8[5].p3.x,
+                tri8[4].p3.x,
+                tri8[3].p3.x,
+                tri8[2].p3.x,
+                tri8[1].p3.x,
+                tri8[0].p3.x,
             );
             let y1 = _mm256_set_ps(
-                tri8[0].p1.y,
-                tri8[1].p1.y,
-                tri8[2].p1.y,
-                tri8[3].p1.y,
-                tri8[4].p1.y,
-                tri8[5].p1.y,
-                tri8[6].p1.y,
                 tri8[7].p1.y,
+                tri8[6].p1.y,
+                tri8[5].p1.y,
+                tri8[4].p1.y,
+                tri8[3].p1.y,
+                tri8[2].p1.y,
+                tri8[1].p1.y,
+                tri8[0].p1.y,
             );
             let y2 = _mm256_set_ps(
-                tri8[0].p2.y,
-                tri8[1].p2.y,
-                tri8[2].p2.y,
-                tri8[3].p2.y,
-                tri8[4].p2.y,
-                tri8[5].p2.y,
+                tri8[7].p2.y,
                 tri8[6].p2.y,
+                tri8[5].p2.y,
+                tri8[4].p2.y,
+                tri8[3].p2.y,
+                tri8[2].p2.y,
+                tri8[1].p2.y,
                 tri8[7].p2.y,
             );
             let y3 = _mm256_set_ps(
-                tri8[0].p3.y,
-                tri8[1].p3.y,
-                tri8[2].p3.y,
-                tri8[3].p3.y,
-                tri8[4].p3.y,
-                tri8[5].p3.y,
-                tri8[6].p3.y,
                 tri8[7].p3.y,
+                tri8[6].p3.y,
+                tri8[5].p3.y,
+                tri8[4].p3.y,
+                tri8[3].p3.y,
+                tri8[2].p3.y,
+                tri8[1].p3.y,
+                tri8[0].p3.y,
             );
             let z1 = _mm256_set_ps(
-                tri8[0].p1.z,
-                tri8[1].p1.z,
-                tri8[2].p1.z,
-                tri8[3].p1.z,
-                tri8[4].p1.z,
-                tri8[5].p1.z,
-                tri8[6].p1.z,
                 tri8[7].p1.z,
+                tri8[6].p1.z,
+                tri8[5].p1.z,
+                tri8[4].p1.z,
+                tri8[3].p1.z,
+                tri8[2].p1.z,
+                tri8[1].p1.z,
+                tri8[0].p1.z,
             );
             let z2 = _mm256_set_ps(
-                tri8[0].p2.z,
-                tri8[1].p2.z,
-                tri8[2].p2.z,
-                tri8[3].p2.z,
-                tri8[4].p2.z,
-                tri8[5].p2.z,
-                tri8[6].p2.z,
                 tri8[7].p2.z,
+                tri8[6].p2.z,
+                tri8[5].p2.z,
+                tri8[4].p2.z,
+                tri8[3].p2.z,
+                tri8[2].p2.z,
+                tri8[1].p2.z,
+                tri8[0].p2.z,
             );
             let z3 = _mm256_set_ps(
-                tri8[0].p3.z,
-                tri8[1].p3.z,
-                tri8[2].p3.z,
-                tri8[3].p3.z,
-                tri8[4].p3.z,
-                tri8[5].p3.z,
-                tri8[6].p3.z,
                 tri8[7].p3.z,
+                tri8[6].p3.z,
+                tri8[5].p3.z,
+                tri8[4].p3.z,
+                tri8[3].p3.z,
+                tri8[2].p3.z,
+                tri8[1].p3.z,
+                tri8[0].p3.z,
             );
 
             let x_min = _mm256_min_ps(_mm256_min_ps(x1, x2), x3);
@@ -118,18 +117,12 @@ pub fn tri_bbox_simd(tris: &[Triangle3d]) -> Vec<Line3d> {
             let x_max = _mm256_max_ps(_mm256_max_ps(x1, x2), x3);
             let y_max = _mm256_max_ps(_mm256_max_ps(y1, y2), y3);
             let z_max = _mm256_max_ps(_mm256_max_ps(z1, z2), z3);
-            let mut x_min_dst = [0f32; 8];
-            let mut y_min_dst = [0f32; 8];
-            let mut z_min_dst = [0f32; 8];
-            let mut x_max_dst = [0f32; 8];
-            let mut y_max_dst = [0f32; 8];
-            let mut z_max_dst = [0f32; 8];
-            _mm256_store_ps(x_min_dst.as_mut_ptr() as *mut _, x_min);
-            _mm256_store_ps(y_min_dst.as_mut_ptr() as *mut _, y_min);
-            _mm256_store_ps(z_min_dst.as_mut_ptr() as *mut _, z_min);
-            _mm256_store_ps(x_max_dst.as_mut_ptr() as *mut _, x_max);
-            _mm256_store_ps(y_max_dst.as_mut_ptr() as *mut _, y_max);
-            _mm256_store_ps(z_max_dst.as_mut_ptr() as *mut _, z_max);
+            let x_min_dst = std::mem::transmute::<__m256, [f32; 8]>(x_min);
+            let y_min_dst = std::mem::transmute::<__m256, [f32; 8]>(y_min);
+            let z_min_dst = std::mem::transmute::<__m256, [f32; 8]>(z_min);
+            let x_max_dst = std::mem::transmute::<__m256, [f32; 8]>(x_max);
+            let y_max_dst = std::mem::transmute::<__m256, [f32; 8]>(y_max);
+            let z_max_dst = std::mem::transmute::<__m256, [f32; 8]>(z_max);
             for index in 0..8 {
                 results.push(Line3d {
                     p1: Point3d::new(
@@ -156,99 +149,101 @@ pub fn tri_bbox_simd_par(tris: &[Triangle3d]) -> Vec<Line3d> {
     let tri_chunks = tris.par_chunks_exact(8);
     let remainder = tri_chunks.remainder();
     let mut results: Vec<Line3d> =
-        (0..tris.len()).map(|_| Default::default()).collect();
-    tri_chunks
-        .zip(results.par_chunks_exact_mut(8))
-        .for_each(|(tri8, slice)| unsafe {
+        Vec::with_capacity(tris.len() + remainder.len());
+    unsafe {
+        results.set_len(tris.len());
+    }
+    tri_chunks.zip(results.par_chunks_exact_mut(8)).for_each(
+        |(tri8, slice)| unsafe {
             let x1 = _mm256_set_ps(
-                tri8[0].p1.x,
-                tri8[1].p1.x,
-                tri8[2].p1.x,
-                tri8[3].p1.x,
-                tri8[4].p1.x,
-                tri8[5].p1.x,
-                tri8[6].p1.x,
                 tri8[7].p1.x,
+                tri8[6].p1.x,
+                tri8[5].p1.x,
+                tri8[4].p1.x,
+                tri8[3].p1.x,
+                tri8[2].p1.x,
+                tri8[1].p1.x,
+                tri8[0].p1.x,
             );
             let x2 = _mm256_set_ps(
-                tri8[0].p2.x,
-                tri8[1].p2.x,
-                tri8[2].p2.x,
-                tri8[3].p2.x,
-                tri8[4].p2.x,
-                tri8[5].p2.x,
-                tri8[6].p2.x,
                 tri8[7].p2.x,
+                tri8[6].p2.x,
+                tri8[5].p2.x,
+                tri8[4].p2.x,
+                tri8[3].p2.x,
+                tri8[2].p2.x,
+                tri8[1].p2.x,
+                tri8[0].p2.x,
             );
             let x3 = _mm256_set_ps(
-                tri8[0].p3.x,
-                tri8[1].p3.x,
-                tri8[2].p3.x,
-                tri8[3].p3.x,
-                tri8[4].p3.x,
-                tri8[5].p3.x,
-                tri8[6].p3.x,
                 tri8[7].p3.x,
+                tri8[6].p3.x,
+                tri8[5].p3.x,
+                tri8[4].p3.x,
+                tri8[3].p3.x,
+                tri8[2].p3.x,
+                tri8[1].p3.x,
+                tri8[0].p3.x,
             );
             let y1 = _mm256_set_ps(
-                tri8[0].p1.y,
-                tri8[1].p1.y,
-                tri8[2].p1.y,
-                tri8[3].p1.y,
-                tri8[4].p1.y,
-                tri8[5].p1.y,
-                tri8[6].p1.y,
                 tri8[7].p1.y,
+                tri8[6].p1.y,
+                tri8[5].p1.y,
+                tri8[4].p1.y,
+                tri8[3].p1.y,
+                tri8[2].p1.y,
+                tri8[1].p1.y,
+                tri8[0].p1.y,
             );
             let y2 = _mm256_set_ps(
-                tri8[0].p2.y,
-                tri8[1].p2.y,
-                tri8[2].p2.y,
-                tri8[3].p2.y,
-                tri8[4].p2.y,
-                tri8[5].p2.y,
+                tri8[7].p2.y,
                 tri8[6].p2.y,
+                tri8[5].p2.y,
+                tri8[4].p2.y,
+                tri8[3].p2.y,
+                tri8[2].p2.y,
+                tri8[1].p2.y,
                 tri8[7].p2.y,
             );
             let y3 = _mm256_set_ps(
-                tri8[0].p3.y,
-                tri8[1].p3.y,
-                tri8[2].p3.y,
-                tri8[3].p3.y,
-                tri8[4].p3.y,
-                tri8[5].p3.y,
-                tri8[6].p3.y,
                 tri8[7].p3.y,
+                tri8[6].p3.y,
+                tri8[5].p3.y,
+                tri8[4].p3.y,
+                tri8[3].p3.y,
+                tri8[2].p3.y,
+                tri8[1].p3.y,
+                tri8[0].p3.y,
             );
             let z1 = _mm256_set_ps(
-                tri8[0].p1.z,
-                tri8[1].p1.z,
-                tri8[2].p1.z,
-                tri8[3].p1.z,
-                tri8[4].p1.z,
-                tri8[5].p1.z,
-                tri8[6].p1.z,
                 tri8[7].p1.z,
+                tri8[6].p1.z,
+                tri8[5].p1.z,
+                tri8[4].p1.z,
+                tri8[3].p1.z,
+                tri8[2].p1.z,
+                tri8[1].p1.z,
+                tri8[0].p1.z,
             );
             let z2 = _mm256_set_ps(
-                tri8[0].p2.z,
-                tri8[1].p2.z,
-                tri8[2].p2.z,
-                tri8[3].p2.z,
-                tri8[4].p2.z,
-                tri8[5].p2.z,
-                tri8[6].p2.z,
                 tri8[7].p2.z,
+                tri8[6].p2.z,
+                tri8[5].p2.z,
+                tri8[4].p2.z,
+                tri8[3].p2.z,
+                tri8[2].p2.z,
+                tri8[1].p2.z,
+                tri8[0].p2.z,
             );
             let z3 = _mm256_set_ps(
-                tri8[0].p3.z,
-                tri8[1].p3.z,
-                tri8[2].p3.z,
-                tri8[3].p3.z,
-                tri8[4].p3.z,
-                tri8[5].p3.z,
-                tri8[6].p3.z,
                 tri8[7].p3.z,
+                tri8[6].p3.z,
+                tri8[5].p3.z,
+                tri8[4].p3.z,
+                tri8[3].p3.z,
+                tri8[2].p3.z,
+                tri8[1].p3.z,
+                tri8[0].p3.z,
             );
 
             let x_min = _mm256_min_ps(_mm256_min_ps(x1, x2), x3);
@@ -257,18 +252,12 @@ pub fn tri_bbox_simd_par(tris: &[Triangle3d]) -> Vec<Line3d> {
             let x_max = _mm256_max_ps(_mm256_max_ps(x1, x2), x3);
             let y_max = _mm256_max_ps(_mm256_max_ps(y1, y2), y3);
             let z_max = _mm256_max_ps(_mm256_max_ps(z1, z2), z3);
-            let mut x_min_dst = [0f32; 8];
-            let mut y_min_dst = [0f32; 8];
-            let mut z_min_dst = [0f32; 8];
-            let mut x_max_dst = [0f32; 8];
-            let mut y_max_dst = [0f32; 8];
-            let mut z_max_dst = [0f32; 8];
-            _mm256_store_ps(x_min_dst.as_mut_ptr() as *mut _, x_min);
-            _mm256_store_ps(y_min_dst.as_mut_ptr() as *mut _, y_min);
-            _mm256_store_ps(z_min_dst.as_mut_ptr() as *mut _, z_min);
-            _mm256_store_ps(x_max_dst.as_mut_ptr() as *mut _, x_max);
-            _mm256_store_ps(y_max_dst.as_mut_ptr() as *mut _, y_max);
-            _mm256_store_ps(z_max_dst.as_mut_ptr() as *mut _, z_max);
+            let x_min_dst = std::mem::transmute::<__m256, [f32; 8]>(x_min);
+            let y_min_dst = std::mem::transmute::<__m256, [f32; 8]>(y_min);
+            let z_min_dst = std::mem::transmute::<__m256, [f32; 8]>(z_min);
+            let x_max_dst = std::mem::transmute::<__m256, [f32; 8]>(x_max);
+            let y_max_dst = std::mem::transmute::<__m256, [f32; 8]>(y_max);
+            let z_max_dst = std::mem::transmute::<__m256, [f32; 8]>(z_max);
             slice[0] = Line3d {
                 p1: Point3d::new(x_min_dst[0], y_min_dst[0], z_min_dst[0]),
                 p2: Point3d::new(x_max_dst[0], y_max_dst[0], z_max_dst[0]),
@@ -301,7 +290,8 @@ pub fn tri_bbox_simd_par(tris: &[Triangle3d]) -> Vec<Line3d> {
                 p1: Point3d::new(x_min_dst[7], y_min_dst[7], z_min_dst[7]),
                 p2: Point3d::new(x_max_dst[7], y_max_dst[7], z_max_dst[7]),
             };
-        });
+        },
+    );
     for tri in remainder {
         results.push(tri.bbox());
     }
@@ -310,7 +300,7 @@ pub fn tri_bbox_simd_par(tris: &[Triangle3d]) -> Vec<Line3d> {
 }
 
 pub fn tri_bbox_trix(tris: &[Triangle3dx8], rem: &[Triangle3d]) -> Vec<Line3d> {
-    let mut results: Vec<Line3d> = Vec::new();
+    let mut results: Vec<Line3d> = Vec::with_capacity((tris.len() * 8) + rem.len());
     for tri8 in tris {
         unsafe {
             let x_min =
@@ -325,18 +315,12 @@ pub fn tri_bbox_trix(tris: &[Triangle3dx8], rem: &[Triangle3d]) -> Vec<Line3d> {
                 _mm256_max_ps(_mm256_max_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
             let z_max =
                 _mm256_max_ps(_mm256_max_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
-            let mut x_min_dst = [0f32; 8];
-            let mut y_min_dst = [0f32; 8];
-            let mut z_min_dst = [0f32; 8];
-            let mut x_max_dst = [0f32; 8];
-            let mut y_max_dst = [0f32; 8];
-            let mut z_max_dst = [0f32; 8];
-            _mm256_store_ps(x_min_dst.as_mut_ptr() as *mut _, x_min);
-            _mm256_store_ps(y_min_dst.as_mut_ptr() as *mut _, y_min);
-            _mm256_store_ps(z_min_dst.as_mut_ptr() as *mut _, z_min);
-            _mm256_store_ps(x_max_dst.as_mut_ptr() as *mut _, x_max);
-            _mm256_store_ps(y_max_dst.as_mut_ptr() as *mut _, y_max);
-            _mm256_store_ps(z_max_dst.as_mut_ptr() as *mut _, z_max);
+            let x_min_dst = std::mem::transmute::<__m256, [f32; 8]>(x_min);
+            let y_min_dst = std::mem::transmute::<__m256, [f32; 8]>(y_min);
+            let z_min_dst = std::mem::transmute::<__m256, [f32; 8]>(z_min);
+            let x_max_dst = std::mem::transmute::<__m256, [f32; 8]>(x_max);
+            let y_max_dst = std::mem::transmute::<__m256, [f32; 8]>(y_max);
+            let z_max_dst = std::mem::transmute::<__m256, [f32; 8]>(z_max);
             for index in 0..8 {
                 results.push(Line3d {
                     p1: Point3d::new(
@@ -364,7 +348,10 @@ pub fn tri_bbox_trix_par(
     rem: &[Triangle3d],
 ) -> Vec<Line3d> {
     let mut results: Vec<Line3d> =
-        (0..tris.len()).map(|_| Default::default()).collect();
+        Vec::with_capacity((tris.len() * 8) + rem.len());
+    unsafe {
+        results.set_len(tris.len() * 8);
+    }
     tris.par_iter()
         .zip(results.par_chunks_exact_mut(8))
         .for_each(|(tri8, slice)| unsafe {
@@ -380,18 +367,12 @@ pub fn tri_bbox_trix_par(
                 _mm256_max_ps(_mm256_max_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
             let z_max =
                 _mm256_max_ps(_mm256_max_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
-            let mut x_min_dst = [0f32; 8];
-            let mut y_min_dst = [0f32; 8];
-            let mut z_min_dst = [0f32; 8];
-            let mut x_max_dst = [0f32; 8];
-            let mut y_max_dst = [0f32; 8];
-            let mut z_max_dst = [0f32; 8];
-            _mm256_store_ps(x_min_dst.as_mut_ptr() as *mut _, x_min);
-            _mm256_store_ps(y_min_dst.as_mut_ptr() as *mut _, y_min);
-            _mm256_store_ps(z_min_dst.as_mut_ptr() as *mut _, z_min);
-            _mm256_store_ps(x_max_dst.as_mut_ptr() as *mut _, x_max);
-            _mm256_store_ps(y_max_dst.as_mut_ptr() as *mut _, y_max);
-            _mm256_store_ps(z_max_dst.as_mut_ptr() as *mut _, z_max);
+            let x_min_dst = std::mem::transmute::<__m256, [f32; 8]>(x_min);
+            let y_min_dst = std::mem::transmute::<__m256, [f32; 8]>(y_min);
+            let z_min_dst = std::mem::transmute::<__m256, [f32; 8]>(z_min);
+            let x_max_dst = std::mem::transmute::<__m256, [f32; 8]>(x_max);
+            let y_max_dst = std::mem::transmute::<__m256, [f32; 8]>(y_max);
+            let z_max_dst = std::mem::transmute::<__m256, [f32; 8]>(z_max);
             slice[0] = Line3d {
                 p1: Point3d::new(x_min_dst[0], y_min_dst[0], z_min_dst[0]),
                 p2: Point3d::new(x_max_dst[0], y_max_dst[0], z_max_dst[0]),
@@ -437,94 +418,94 @@ pub fn to_trix8(tris: &[Triangle3d]) -> (Vec<Triangle3dx8>, Vec<Triangle3d>) {
     let result = tri_chunks
         .map(|tri8| unsafe {
             let x1 = _mm256_set_ps(
-                tri8[0].p1.x,
-                tri8[1].p1.x,
-                tri8[2].p1.x,
-                tri8[3].p1.x,
-                tri8[4].p1.x,
-                tri8[5].p1.x,
-                tri8[6].p1.x,
                 tri8[7].p1.x,
+                tri8[6].p1.x,
+                tri8[5].p1.x,
+                tri8[4].p1.x,
+                tri8[3].p1.x,
+                tri8[2].p1.x,
+                tri8[1].p1.x,
+                tri8[0].p1.x,
             );
             let x2 = _mm256_set_ps(
-                tri8[0].p2.x,
-                tri8[1].p2.x,
-                tri8[2].p2.x,
-                tri8[3].p2.x,
-                tri8[4].p2.x,
-                tri8[5].p2.x,
-                tri8[6].p2.x,
                 tri8[7].p2.x,
+                tri8[6].p2.x,
+                tri8[5].p2.x,
+                tri8[4].p2.x,
+                tri8[3].p2.x,
+                tri8[2].p2.x,
+                tri8[1].p2.x,
+                tri8[0].p2.x,
             );
             let x3 = _mm256_set_ps(
-                tri8[0].p3.x,
-                tri8[1].p3.x,
-                tri8[2].p3.x,
-                tri8[3].p3.x,
-                tri8[4].p3.x,
-                tri8[5].p3.x,
-                tri8[6].p3.x,
                 tri8[7].p3.x,
+                tri8[6].p3.x,
+                tri8[5].p3.x,
+                tri8[4].p3.x,
+                tri8[3].p3.x,
+                tri8[2].p3.x,
+                tri8[1].p3.x,
+                tri8[0].p3.x,
             );
             let y1 = _mm256_set_ps(
-                tri8[0].p1.y,
-                tri8[1].p1.y,
-                tri8[2].p1.y,
-                tri8[3].p1.y,
-                tri8[4].p1.y,
-                tri8[5].p1.y,
-                tri8[6].p1.y,
                 tri8[7].p1.y,
+                tri8[6].p1.y,
+                tri8[5].p1.y,
+                tri8[4].p1.y,
+                tri8[3].p1.y,
+                tri8[2].p1.y,
+                tri8[1].p1.y,
+                tri8[0].p1.y,
             );
             let y2 = _mm256_set_ps(
-                tri8[0].p2.y,
-                tri8[1].p2.y,
-                tri8[2].p2.y,
-                tri8[3].p2.y,
-                tri8[4].p2.y,
-                tri8[5].p2.y,
+                tri8[7].p2.y,
                 tri8[6].p2.y,
+                tri8[5].p2.y,
+                tri8[4].p2.y,
+                tri8[3].p2.y,
+                tri8[2].p2.y,
+                tri8[1].p2.y,
                 tri8[7].p2.y,
             );
             let y3 = _mm256_set_ps(
-                tri8[0].p3.y,
-                tri8[1].p3.y,
-                tri8[2].p3.y,
-                tri8[3].p3.y,
-                tri8[4].p3.y,
-                tri8[5].p3.y,
-                tri8[6].p3.y,
                 tri8[7].p3.y,
+                tri8[6].p3.y,
+                tri8[5].p3.y,
+                tri8[4].p3.y,
+                tri8[3].p3.y,
+                tri8[2].p3.y,
+                tri8[1].p3.y,
+                tri8[0].p3.y,
             );
             let z1 = _mm256_set_ps(
-                tri8[0].p1.z,
-                tri8[1].p1.z,
-                tri8[2].p1.z,
-                tri8[3].p1.z,
-                tri8[4].p1.z,
-                tri8[5].p1.z,
-                tri8[6].p1.z,
                 tri8[7].p1.z,
+                tri8[6].p1.z,
+                tri8[5].p1.z,
+                tri8[4].p1.z,
+                tri8[3].p1.z,
+                tri8[2].p1.z,
+                tri8[1].p1.z,
+                tri8[0].p1.z,
             );
             let z2 = _mm256_set_ps(
-                tri8[0].p2.z,
-                tri8[1].p2.z,
-                tri8[2].p2.z,
-                tri8[3].p2.z,
-                tri8[4].p2.z,
-                tri8[5].p2.z,
-                tri8[6].p2.z,
                 tri8[7].p2.z,
+                tri8[6].p2.z,
+                tri8[5].p2.z,
+                tri8[4].p2.z,
+                tri8[3].p2.z,
+                tri8[2].p2.z,
+                tri8[1].p2.z,
+                tri8[0].p2.z,
             );
             let z3 = _mm256_set_ps(
-                tri8[0].p3.z,
-                tri8[1].p3.z,
-                tri8[2].p3.z,
-                tri8[3].p3.z,
-                tri8[4].p3.z,
-                tri8[5].p3.z,
-                tri8[6].p3.z,
                 tri8[7].p3.z,
+                tri8[6].p3.z,
+                tri8[5].p3.z,
+                tri8[4].p3.z,
+                tri8[3].p3.z,
+                tri8[2].p3.z,
+                tri8[1].p3.z,
+                tri8[0].p3.z,
             );
 
             Triangle3dx8 {
