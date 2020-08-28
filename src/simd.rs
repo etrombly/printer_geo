@@ -387,20 +387,16 @@ pub fn tri_bbox_trix_par_line(
     tris: &[Triangle3dx8],
     rem: &[Triangle3d],
 ) -> (Vec<Line3dx8>, Vec<Line3d>) {
-    let mut results: Vec<Line3dx8> = Vec::with_capacity(tris.len());
-    unsafe {
-        results.set_len(tris.len());
-    }
+    let results: Vec<Line3dx8> = 
     tris.par_iter()
-        .zip(results.par_iter_mut())
-        .for_each(|(tri8, result)| unsafe {
+        .map(|tri8| unsafe {
             let x_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
             let y_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
             let z_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
             let x_max = _mm256_max_ps(_mm256_max_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
             let y_max = _mm256_max_ps(_mm256_max_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
             let z_max = _mm256_max_ps(_mm256_max_ps(tri8.p1.z, tri8.p2.z), tri8.p3.z);
-            *result = Line3dx8 {
+            Line3dx8 {
                 p1: Point3dx8 {
                     x: x_min,
                     y: y_min,
@@ -411,8 +407,8 @@ pub fn tri_bbox_trix_par_line(
                     y: y_max,
                     z: z_max,
                 },
-            };
-        });
+            }
+        }).collect();
     (results, rem.par_iter().map(|tri| tri.bbox()).collect())
 }
 
