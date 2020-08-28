@@ -165,40 +165,6 @@ pub fn to_line3d(line: &LineVk) -> Line3d {
 mod cs {
     vulkano_shaders::shader! {
         ty: "compute",
-        src: "
-#version 450
-
-layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
-
-struct Line {
-    vec3 p1;
-    vec3 p2;
-};
-
-struct Triangle {
-    vec3 p1;
-    vec3 p2;
-    vec3 p3;
-};
-
-layout(set = 0, binding = 0) readonly buffer Triangles {
-    Triangle tri[];
-} tris;
-
-layout(set = 0, binding = 1) buffer Lines {
-    Line line[];
-} lines;
-
-void main() {
-    uint idx = gl_GlobalInvocationID.x;
-    float x_max = max(max(tris.tri[idx].p1.x,tris.tri[idx].p2.x), tris.tri[idx].p3.x);
-    float y_max = max(max(tris.tri[idx].p1.y,tris.tri[idx].p2.y), tris.tri[idx].p3.y);
-    float z_max = max(max(tris.tri[idx].p1.z,tris.tri[idx].p2.z), tris.tri[idx].p3.z);
-    float x_min = min(min(tris.tri[idx].p1.x,tris.tri[idx].p2.x), tris.tri[idx].p3.x);
-    float y_min = min(min(tris.tri[idx].p1.y,tris.tri[idx].p2.y), tris.tri[idx].p3.y);
-    float z_min = min(min(tris.tri[idx].p1.z,tris.tri[idx].p2.z), tris.tri[idx].p3.z);
-    lines.line[idx].p1 = vec3(x_min, y_min, z_min);
-    lines.line[idx].p2 = vec3(x_max, y_max, z_max);
-}"
+        path: "shaders/bbox.comp" 
     }
 }
