@@ -3,9 +3,7 @@ use std::{default::Default, sync::Arc};
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer, ImmutableBuffer},
     command_buffer::{AutoCommandBufferBuilder, CommandBuffer},
-    descriptor::{
-        descriptor_set::PersistentDescriptorSet, PipelineLayoutAbstract,
-    },
+    descriptor::{descriptor_set::PersistentDescriptorSet, PipelineLayoutAbstract},
     device::{Device, DeviceExtensions, Features, Queue},
     instance::{Instance, InstanceExtensions, PhysicalDevice},
     pipeline::{
@@ -42,8 +40,8 @@ pub struct LineVk {
 }
 
 pub fn init_vk() -> Vk {
-    let instance = Instance::new(None, &InstanceExtensions::none(), None)
-        .expect("failed to create instance");
+    let instance =
+        Instance::new(None, &InstanceExtensions::none(), None).expect("failed to create instance");
     let physical = PhysicalDevice::enumerate(&instance)
         .next()
         .expect("no device available");
@@ -72,15 +70,10 @@ pub fn compute_bbox(tris: &[TriangleVk], vk: &Vk) -> Vec<LineVk> {
     vulkano::impl_vertex!(PointVk, position);
     vulkano::impl_vertex!(LineVk, p1, p2);
     vulkano::impl_vertex!(TriangleVk, p1, p2, p3);
-    let shader = cs::Shader::load(vk.device.clone())
-        .expect("failed to create shader module");
+    let shader = cs::Shader::load(vk.device.clone()).expect("failed to create shader module");
     let compute_pipeline = Arc::new(
-        ComputePipeline::new(
-            vk.device.clone(),
-            &shader.main_entry_point(),
-            &(),
-        )
-        .expect("failed to create compute pipeline"),
+        ComputePipeline::new(vk.device.clone(), &shader.main_entry_point(), &())
+            .expect("failed to create compute pipeline"),
     );
     let dest_content = (0..tris.len()).map(|_| LineVk {
         ..Default::default()
@@ -88,25 +81,18 @@ pub fn compute_bbox(tris: &[TriangleVk], vk: &Vk) -> Vec<LineVk> {
 
     let layout = compute_pipeline.layout().descriptor_set_layout(0).unwrap();
 
-    let (source, source_future) = ImmutableBuffer::from_iter(
-        tris.iter().copied(),
-        BufferUsage::all(),
-        vk.queue.clone(),
-    )
-    .expect("failed to create buffer");
+    let (source, source_future) =
+        ImmutableBuffer::from_iter(tris.iter().copied(), BufferUsage::all(), vk.queue.clone())
+            .expect("failed to create buffer");
 
     source_future
         .then_signal_fence_and_flush()
         .unwrap()
         .wait(None)
         .unwrap();
-    let dest = CpuAccessibleBuffer::from_iter(
-        vk.device.clone(),
-        BufferUsage::all(),
-        false,
-        dest_content,
-    )
-    .expect("failed to create buffer");
+    let dest =
+        CpuAccessibleBuffer::from_iter(vk.device.clone(), BufferUsage::all(), false, dest_content)
+            .expect("failed to create buffer");
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
             .add_buffer(source)
@@ -117,9 +103,7 @@ pub fn compute_bbox(tris: &[TriangleVk], vk: &Vk) -> Vec<LineVk> {
             .unwrap(),
     );
 
-    let mut builder =
-        AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())
-            .unwrap();
+    let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family()).unwrap();
     builder
         .dispatch(
             [tris.len() as u32 / 128, 1, 1],

@@ -70,10 +70,7 @@ fn read_header<T: ReadBytesExt>(input: &mut T) -> Result<BinaryStlHeader> {
         Ok(n) => {
             if n == header.len() {
             } else {
-                return Err(Error::new(
-                    ErrorKind::Other,
-                    "Couldn't read STL header",
-                ));
+                return Err(Error::new(ErrorKind::Other, "Couldn't read STL header"));
             }
         },
         Err(e) => return Err(e),
@@ -106,10 +103,7 @@ fn write_point<T: WriteBytesExt>(out: &mut T, p: [f32; 3]) -> Result<()> {
     Ok(())
 }
 
-pub fn write_stl<T: WriteBytesExt>(
-    out: &mut T,
-    stl: &BinaryStlFile,
-) -> Result<()> {
+pub fn write_stl<T: WriteBytesExt>(out: &mut T, stl: &BinaryStlFile) -> Result<()> {
     assert_eq!(stl.header.num_triangles as usize, stl.triangles.len());
 
     // write the header.

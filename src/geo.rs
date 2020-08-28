@@ -43,15 +43,12 @@ impl Point3d {
     }
 
     pub fn is_nan(&self) -> bool {
-        !self.is_infinite()
-            && (self.x.is_nan() || self.y.is_nan() || self.z.is_nan())
+        !self.is_infinite() && (self.x.is_nan() || self.y.is_nan() || self.z.is_nan())
     }
 
     pub fn distance(&self, other: &Point3d) -> f32 {
-        ((self.x - other.x).powi(2)
-            + (self.y - other.y).powi(2)
-            + (self.z - other.z).powi(2))
-        .sqrt()
+        ((self.x - other.x).powi(2) + (self.y - other.y).powi(2) + (self.z - other.z).powi(2))
+            .sqrt()
     }
 }
 
@@ -148,21 +145,14 @@ impl Line3d {
         }
     }
 
-    pub fn from_points(p1: &Point3d, p2: &Point3d) -> Line3d {
-        Line3d { p1: *p1, p2: *p2 }
-    }
+    pub fn from_points(p1: &Point3d, p2: &Point3d) -> Line3d { Line3d { p1: *p1, p2: *p2 } }
 
     pub fn on_line(&self, point: &Point3d) -> bool {
-        (self.p1.distance(point) + self.p2.distance(point))
-            - self.p1.distance(&self.p2)
-            < PRECISION
+        (self.p1.distance(point) + self.p2.distance(point)) - self.p1.distance(&self.p2) < PRECISION
     }
 
     pub fn in_2d_bounds(&self, point: &Point3d) -> bool {
-        point.x >= self.p1.x
-            && point.x <= self.p2.x
-            && point.y >= self.p1.y
-            && point.y <= self.p2.y
+        point.x >= self.p1.x && point.x <= self.p2.x && point.y >= self.p1.y && point.y <= self.p2.y
     }
 }
 
@@ -254,11 +244,7 @@ pub struct Triangle3d {
 }
 
 impl Triangle3d {
-    pub fn new(
-        p1: (f32, f32, f32),
-        p2: (f32, f32, f32),
-        p3: (f32, f32, f32),
-    ) -> Triangle3d {
+    pub fn new(p1: (f32, f32, f32), p2: (f32, f32, f32), p3: (f32, f32, f32)) -> Triangle3d {
         Triangle3d {
             p1: Point3d::new(p1.0, p1.1, p1.2),
             p2: Point3d::new(p2.0, p2.1, p2.2),
@@ -267,9 +253,7 @@ impl Triangle3d {
     }
 
     pub fn in_2d_bounds(&self, bbox: &Line3d) -> bool {
-        bbox.in_2d_bounds(&self.p1)
-            || bbox.in_2d_bounds(&self.p2)
-            || bbox.in_2d_bounds(&self.p3)
+        bbox.in_2d_bounds(&self.p1) || bbox.in_2d_bounds(&self.p2) || bbox.in_2d_bounds(&self.p3)
     }
 }
 
@@ -289,9 +273,7 @@ impl Intersect<Plane> for Triangle3d {
             }
         }
         if results.len() == 2 {
-            if let (Shape::Point3d(p1), Shape::Point3d(p2)) =
-                (results[0], results[1])
-            {
+            if let (Shape::Point3d(p1), Shape::Point3d(p2)) = (results[0], results[1]) {
                 return Some(Shape::Line3d(Line3d::from_points(&p1, &p2)));
             }
         }
@@ -377,9 +359,7 @@ pub struct Circle {
 }
 
 impl Circle {
-    pub fn new(center: Point3d, radius: f32) -> Circle {
-        Circle { center, radius }
-    }
+    pub fn new(center: Point3d, radius: f32) -> Circle { Circle { center, radius } }
 
     pub fn in_2d_bounds(&self, point: &Point3d) -> bool {
         let dx = f32::abs(point.x - self.center.x);

@@ -52,8 +52,7 @@ fn main() {
         //    lines.len()
         //);
         // println!("max_x: {} max_y: {}", max_x, max_y);
-        let mut f = File::create(format!("image{}.svg", i))
-            .expect("Unable to create file");
+        let mut f = File::create(format!("image{}.svg", i)).expect("Unable to create file");
         f.write_all(
             simplesvg::Svg(
                 lines,

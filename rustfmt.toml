@@ -1,4 +1,4 @@
-max_width = 80
+max_width = 100
 tab_spaces = 4
 fn_single_line = true
 match_block_trailing_comma = true
