@@ -43,6 +43,11 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             let _bboxes: Vec<Line3d> = tri_bbox_trix_par(&trix8, &rem);
         })
     });
+    c.bench_function("simd par trix8 linex8 bboxes", |b| {
+        b.iter(|| {
+            let _bboxes: (Vec<Line3dx8>, Vec<Line3d>) = tri_bbox_trix_par_line(&trix8, &rem);
+        })
+    });
     // TODO: move this check to tests
     // let bboxes: Vec<Line3d> = triangles.iter().map(|x| x.bbox()).collect();
     // let bboxes2: Vec<Line3d> = triangles.par_iter().map(|x|
