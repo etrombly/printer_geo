@@ -92,8 +92,10 @@ pub fn compute_bbox(tris: &[TriangleVk], vk: &Vk) -> Vec<LineVk> {
 
     let layout = compute_pipeline.layout().descriptor_set_layout(0).unwrap();
 
+    let mut source_usage = BufferUsage::transfer_source();
+    source_usage.storage_buffer = true;
     let (source, source_future) =
-        ImmutableBuffer::from_iter(tris.iter().copied(), BufferUsage::all(), vk.queue.clone())
+        ImmutableBuffer::from_iter(tris.iter().copied(), source_usage, vk.queue.clone())
             .expect("failed to create buffer");
 
     source_future
@@ -101,8 +103,10 @@ pub fn compute_bbox(tris: &[TriangleVk], vk: &Vk) -> Vec<LineVk> {
         .unwrap()
         .wait(None)
         .unwrap();
+    let mut dest_usage = BufferUsage::transfer_destination();
+    dest_usage.storage_buffer = true;
     let dest =
-        CpuAccessibleBuffer::from_iter(vk.device.clone(), BufferUsage::all(), false, dest_content)
+        CpuAccessibleBuffer::from_iter(vk.device.clone(), dest_usage, false, dest_content)
             .expect("failed to create buffer");
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
@@ -178,7 +182,7 @@ struct Triangle {
     vec3 p3;
 };
 
-layout(set = 0, binding = 0) buffer Triangles {
+layout(set = 0, binding = 0) readonly buffer Triangles {
     Triangle tri[];
 } tris;
 
