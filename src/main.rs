@@ -12,6 +12,7 @@ fn main() {
     let bboxes: Vec<LineVk> = compute_bbox(&tri_vk, &vk);
     let bboxes2: Vec<Line3d> = triangles.par_iter().map(|x| x.bbox()).collect();
     let bboxes3: Vec<Line3d> = tri_bbox_trix_par(&trix8, &rem);
+    println!("{:?}\n{:?}\n{:?}", bboxes[0], bboxes2[0], bboxes3[0]);
     println!("{:?}\n{:?}\n{:?}", bboxes[1], bboxes2[1], bboxes3[1]);
 
     for i in 0..30 {

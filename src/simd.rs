@@ -387,8 +387,8 @@ pub fn tri_bbox_trix_par_line(
     tris: &[Triangle3dx8],
     rem: &[Triangle3d],
 ) -> (Vec<Line3dx8>, Vec<Line3d>) {
-    let results: Vec<Line3dx8> = 
-    tris.par_iter()
+    let results: Vec<Line3dx8> = tris
+        .par_iter()
         .map(|tri8| unsafe {
             let x_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.x, tri8.p2.x), tri8.p3.x);
             let y_min = _mm256_min_ps(_mm256_min_ps(tri8.p1.y, tri8.p2.y), tri8.p3.y);
@@ -408,7 +408,8 @@ pub fn tri_bbox_trix_par_line(
                     z: z_max,
                 },
             }
-        }).collect();
+        })
+        .collect();
     (results, rem.par_iter().map(|tri| tri.bbox()).collect())
 }
 

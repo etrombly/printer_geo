@@ -1,15 +1,12 @@
 use crate::geo::*;
-use std::{default::Default, sync::Arc};
+use std::{default::Default, fmt, sync::Arc};
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer, ImmutableBuffer},
     command_buffer::{AutoCommandBufferBuilder, CommandBuffer},
     descriptor::{descriptor_set::PersistentDescriptorSet, PipelineLayoutAbstract},
     device::{Device, DeviceExtensions, Features, Queue},
     instance::{Instance, InstanceExtensions, PhysicalDevice},
-    pipeline::{
-        vertex::{VertexMember, VertexMemberTy},
-        ComputePipeline,
-    },
+    pipeline::ComputePipeline,
     sync::GpuFuture,
 };
 
@@ -18,13 +15,29 @@ pub struct Vk {
     pub queue: Arc<Queue>,
 }
 
-#[derive(Default, Debug, Copy, Clone)]
+#[derive(Default, Copy, Clone)]
 pub struct PointVk {
     pub position: [f32; 3],
+    pub _dummy0: [u8; 4usize],
 }
 
-unsafe impl VertexMember for PointVk {
-    fn format() -> (VertexMemberTy, usize) { (VertexMemberTy::F32, 3) }
+impl PointVk {
+    pub fn new(x: f32, y: f32, z: f32) -> PointVk {
+        PointVk {
+            position: [x, y, z],
+            _dummy0: [0; 4],
+        }
+    }
+}
+
+impl fmt::Debug for PointVk {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PointVk")
+            .field("x", &self.position[0])
+            .field("y", &self.position[1])
+            .field("z", &self.position[2])
+            .finish()
+    }
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -33,6 +46,7 @@ pub struct TriangleVk {
     pub p2: PointVk,
     pub p3: PointVk,
 }
+
 #[derive(Default, Debug, Copy, Clone)]
 pub struct LineVk {
     pub p1: PointVk,
@@ -67,9 +81,6 @@ pub fn init_vk() -> Vk {
 }
 
 pub fn compute_bbox(tris: &[TriangleVk], vk: &Vk) -> Vec<LineVk> {
-    vulkano::impl_vertex!(PointVk, position);
-    vulkano::impl_vertex!(LineVk, p1, p2);
-    vulkano::impl_vertex!(TriangleVk, p1, p2, p3);
     let shader = cs::Shader::load(vk.device.clone()).expect("failed to create shader module");
     let compute_pipeline = Arc::new(
         ComputePipeline::new(vk.device.clone(), &shader.main_entry_point(), &())
@@ -126,15 +137,9 @@ pub fn compute_bbox(tris: &[TriangleVk], vk: &Vk) -> Vec<LineVk> {
 pub fn to_tri_vk(tris: &[Triangle3d]) -> Vec<TriangleVk> {
     tris.iter()
         .map(|tri| TriangleVk {
-            p1: PointVk {
-                position: [tri.p1.x, tri.p1.y, tri.p1.z],
-            },
-            p2: PointVk {
-                position: [tri.p2.x, tri.p2.y, tri.p2.z],
-            },
-            p3: PointVk {
-                position: [tri.p3.x, tri.p3.y, tri.p3.z],
-            },
+            p1: PointVk::new(tri.p1.x, tri.p1.y, tri.p1.z),
+            p2: PointVk::new(tri.p2.x, tri.p2.y, tri.p2.z),
+            p3: PointVk::new(tri.p3.x, tri.p3.y, tri.p3.z),
         })
         .collect()
 }
@@ -173,11 +178,11 @@ struct Triangle {
     vec3 p3;
 };
 
-layout(set = 0, binding = 0) buffer TriangleVk {
+layout(set = 0, binding = 0) buffer Triangles {
     Triangle tri[];
 } tris;
 
-layout(set = 0, binding = 1) buffer LineVk {
+layout(set = 0, binding = 1) buffer Lines {
     Line line[];
 } lines;
 
