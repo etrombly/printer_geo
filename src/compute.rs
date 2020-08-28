@@ -15,17 +15,16 @@ pub struct Vk {
     pub queue: Arc<Queue>,
 }
 
+#[repr(C, align(16))]
 #[derive(Default, Copy, Clone)]
 pub struct PointVk {
     pub position: [f32; 3],
-    pub _dummy0: [u8; 4usize],
 }
 
 impl PointVk {
     pub fn new(x: f32, y: f32, z: f32) -> PointVk {
         PointVk {
             position: [x, y, z],
-            _dummy0: [0; 4],
         }
     }
 }
