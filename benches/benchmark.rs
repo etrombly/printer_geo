@@ -48,17 +48,6 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             let _bboxes: (Vec<Line3dx8>, Vec<Line3d>) = tri_bbox_trix_par_line(&trix8, &rem);
         })
     });
-    // TODO: move this check to tests
-    // let bboxes: Vec<Line3d> = triangles.iter().map(|x| x.bbox()).collect();
-    // let bboxes2: Vec<Line3d> = triangles.par_iter().map(|x|
-    // x.bbox()).collect(); let bboxes3: Vec<Line3d> =
-    // tri_bbox_simd(&triangles); let bboxes4: Vec<Line3d> =
-    // tri_bbox_simd_par(&triangles); assert_eq!(bboxes[0], bboxes2[0]);
-    // println!("iter and par iter are same");
-    // assert_eq!(bboxes[0], bboxes3[0]);
-    // println!("iter and simd are same");
-    // assert_eq!(bboxes[0], bboxes4[0]);
-    // println!("iter and par simd are same");
 }
 
 criterion_group!(benches, criterion_benchmark);

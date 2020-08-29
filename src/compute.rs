@@ -104,9 +104,8 @@ pub fn compute_bbox(tris: &[TriangleVk], vk: &Vk) -> Vec<LineVk> {
         .unwrap();
     let mut dest_usage = BufferUsage::transfer_destination();
     dest_usage.storage_buffer = true;
-    let dest =
-        CpuAccessibleBuffer::from_iter(vk.device.clone(), dest_usage, false, dest_content)
-            .expect("failed to create buffer");
+    let dest = CpuAccessibleBuffer::from_iter(vk.device.clone(), dest_usage, false, dest_content)
+        .expect("failed to create buffer");
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
             .add_buffer(source)
@@ -165,6 +164,6 @@ pub fn to_line3d(line: &LineVk) -> Line3d {
 mod cs {
     vulkano_shaders::shader! {
         ty: "compute",
-        path: "shaders/bbox.comp" 
+        path: "shaders/bbox.comp"
     }
 }
