@@ -1,4 +1,4 @@
-use printer_geo::{compute::*, geo::*, simd::*, util::*};
+use printer_geo::{compute::*, geo::*, avx::*, util::*};
 use rayon::prelude::*;
 use std::{fs::File, io::Write};
 

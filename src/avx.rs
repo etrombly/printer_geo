@@ -72,7 +72,7 @@ pub fn tri_bbox_simd(tris: &[Triangle3d]) -> Vec<Line3d> {
                 tri8[3].p2.y,
                 tri8[2].p2.y,
                 tri8[1].p2.y,
-                tri8[7].p2.y,
+                tri8[0].p2.y,
             );
             let y3 = _mm256_set_ps(
                 tri8[7].p3.y,
@@ -199,7 +199,7 @@ pub fn tri_bbox_simd_par(tris: &[Triangle3d]) -> Vec<Line3d> {
                 tri8[3].p2.y,
                 tri8[2].p2.y,
                 tri8[1].p2.y,
-                tri8[7].p2.y,
+                tri8[0].p2.y,
             );
             let y3 = _mm256_set_ps(
                 tri8[7].p3.y,
@@ -466,7 +466,7 @@ pub fn to_trix8(tris: &[Triangle3d]) -> (Vec<Triangle3dx8>, Vec<Triangle3d>) {
                 tri8[3].p2.y,
                 tri8[2].p2.y,
                 tri8[1].p2.y,
-                tri8[7].p2.y,
+                tri8[0].p2.y,
             );
             let y3 = _mm256_set_ps(
                 tri8[7].p3.y,

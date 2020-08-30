@@ -1,4 +1,5 @@
 pub mod compute;
 pub mod geo;
-pub mod simd;
+pub mod avx;
+pub mod sse;
 pub mod util;
