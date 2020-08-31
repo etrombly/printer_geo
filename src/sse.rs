@@ -8,60 +8,15 @@ pub fn tri_bbox_sse(tris: &[Triangle3d]) -> Vec<Line3d> {
     let remainder = tri_chunks.remainder();
     for tri4 in tri_chunks {
         unsafe {
-            let x1 = _mm_set_ps(
-                tri4[3].p1.x,
-                tri4[2].p1.x,
-                tri4[1].p1.x,
-                tri4[0].p1.x,
-            );
-            let x2 = _mm_set_ps(
-                tri4[3].p2.x,
-                tri4[2].p2.x,
-                tri4[1].p2.x,
-                tri4[0].p2.x,
-            );
-            let x3 = _mm_set_ps(
-                tri4[3].p3.x,
-                tri4[2].p3.x,
-                tri4[1].p3.x,
-                tri4[0].p3.x,
-            );
-            let y1 = _mm_set_ps(
-                tri4[3].p1.y,
-                tri4[2].p1.y,
-                tri4[1].p1.y,
-                tri4[0].p1.y,
-            );
-            let y2 = _mm_set_ps(
-                tri4[3].p2.y,
-                tri4[2].p2.y,
-                tri4[1].p2.y,
-                tri4[0].p2.y,
-            );
-            let y3 = _mm_set_ps(
-                tri4[3].p3.y,
-                tri4[2].p3.y,
-                tri4[1].p3.y,
-                tri4[0].p3.y,
-            );
-            let z1 = _mm_set_ps(
-                tri4[3].p1.z,
-                tri4[2].p1.z,
-                tri4[1].p1.z,
-                tri4[0].p1.z,
-            );
-            let z2 = _mm_set_ps(
-                tri4[3].p2.z,
-                tri4[2].p2.z,
-                tri4[1].p2.z,
-                tri4[0].p2.z,
-            );
-            let z3 = _mm_set_ps(
-                tri4[3].p3.z,
-                tri4[2].p3.z,
-                tri4[1].p3.z,
-                tri4[0].p3.z,
-            );
+            let x1 = _mm_set_ps(tri4[3].p1.x, tri4[2].p1.x, tri4[1].p1.x, tri4[0].p1.x);
+            let x2 = _mm_set_ps(tri4[3].p2.x, tri4[2].p2.x, tri4[1].p2.x, tri4[0].p2.x);
+            let x3 = _mm_set_ps(tri4[3].p3.x, tri4[2].p3.x, tri4[1].p3.x, tri4[0].p3.x);
+            let y1 = _mm_set_ps(tri4[3].p1.y, tri4[2].p1.y, tri4[1].p1.y, tri4[0].p1.y);
+            let y2 = _mm_set_ps(tri4[3].p2.y, tri4[2].p2.y, tri4[1].p2.y, tri4[0].p2.y);
+            let y3 = _mm_set_ps(tri4[3].p3.y, tri4[2].p3.y, tri4[1].p3.y, tri4[0].p3.y);
+            let z1 = _mm_set_ps(tri4[3].p1.z, tri4[2].p1.z, tri4[1].p1.z, tri4[0].p1.z);
+            let z2 = _mm_set_ps(tri4[3].p2.z, tri4[2].p2.z, tri4[1].p2.z, tri4[0].p2.z);
+            let z3 = _mm_set_ps(tri4[3].p3.z, tri4[2].p3.z, tri4[1].p3.z, tri4[0].p3.z);
 
             let x_min = _mm_min_ps(_mm_min_ps(x1, x2), x3);
             let y_min = _mm_min_ps(_mm_min_ps(y1, y2), y3);
@@ -99,60 +54,15 @@ pub fn tri_bbox_sse_par(tris: &[Triangle3d]) -> Vec<Line3d> {
     tri_chunks
         .zip(results.par_chunks_exact_mut(4))
         .for_each(|(tri4, slice)| unsafe {
-            let x1 = _mm_set_ps(
-                tri4[3].p1.x,
-                tri4[2].p1.x,
-                tri4[1].p1.x,
-                tri4[0].p1.x,
-            );
-            let x2 = _mm_set_ps(
-                tri4[3].p2.x,
-                tri4[2].p2.x,
-                tri4[1].p2.x,
-                tri4[0].p2.x,
-            );
-            let x3 = _mm_set_ps(
-                tri4[3].p3.x,
-                tri4[2].p3.x,
-                tri4[1].p3.x,
-                tri4[0].p3.x,
-            );
-            let y1 = _mm_set_ps(
-                tri4[3].p1.y,
-                tri4[2].p1.y,
-                tri4[1].p1.y,
-                tri4[0].p1.y,
-            );
-            let y2 = _mm_set_ps(
-                tri4[3].p2.y,
-                tri4[2].p2.y,
-                tri4[1].p2.y,
-                tri4[0].p2.y,
-            );
-            let y3 = _mm_set_ps(
-                tri4[3].p3.y,
-                tri4[2].p3.y,
-                tri4[1].p3.y,
-                tri4[0].p3.y,
-            );
-            let z1 = _mm_set_ps(
-                tri4[3].p1.z,
-                tri4[2].p1.z,
-                tri4[1].p1.z,
-                tri4[0].p1.z,
-            );
-            let z2 = _mm_set_ps(
-                tri4[3].p2.z,
-                tri4[2].p2.z,
-                tri4[1].p2.z,
-                tri4[0].p2.z,
-            );
-            let z3 = _mm_set_ps(
-                tri4[3].p3.z,
-                tri4[2].p3.z,
-                tri4[1].p3.z,
-                tri4[0].p3.z,
-            );
+            let x1 = _mm_set_ps(tri4[3].p1.x, tri4[2].p1.x, tri4[1].p1.x, tri4[0].p1.x);
+            let x2 = _mm_set_ps(tri4[3].p2.x, tri4[2].p2.x, tri4[1].p2.x, tri4[0].p2.x);
+            let x3 = _mm_set_ps(tri4[3].p3.x, tri4[2].p3.x, tri4[1].p3.x, tri4[0].p3.x);
+            let y1 = _mm_set_ps(tri4[3].p1.y, tri4[2].p1.y, tri4[1].p1.y, tri4[0].p1.y);
+            let y2 = _mm_set_ps(tri4[3].p2.y, tri4[2].p2.y, tri4[1].p2.y, tri4[0].p2.y);
+            let y3 = _mm_set_ps(tri4[3].p3.y, tri4[2].p3.y, tri4[1].p3.y, tri4[0].p3.y);
+            let z1 = _mm_set_ps(tri4[3].p1.z, tri4[2].p1.z, tri4[1].p1.z, tri4[0].p1.z);
+            let z2 = _mm_set_ps(tri4[3].p2.z, tri4[2].p2.z, tri4[1].p2.z, tri4[0].p2.z);
+            let z3 = _mm_set_ps(tri4[3].p3.z, tri4[2].p3.z, tri4[1].p3.z, tri4[0].p3.z);
 
             let x_min = _mm_min_ps(_mm_min_ps(x1, x2), x3);
             let y_min = _mm_min_ps(_mm_min_ps(y1, y2), y3);

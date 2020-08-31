@@ -1,4 +1,5 @@
 use crate::geo::*;
+use rayon::prelude::*;
 use std::{default::Default, fmt, sync::Arc};
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer, ImmutableBuffer},
@@ -52,6 +53,86 @@ pub struct LineVk {
     pub p2: PointVk,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct CircleVk {
+    pub center: PointVk,
+    pub radius: f32,
+}
+
+impl CircleVk {
+    pub fn new(center: PointVk, radius: f32) -> CircleVk { CircleVk { center, radius } }
+
+    pub fn in_2d_bounds(&self, point: &PointVk) -> bool {
+        let dx = f32::abs(point.position[0] - self.center.position[0]);
+        let dy = f32::abs(point.position[1] - self.center.position[1]);
+        if dx > self.radius {
+            false
+        } else if dy > self.radius {
+            false
+        } else if dx + dy <= self.radius {
+            true
+        } else {
+            dx.powi(2) + dy.powi(2) <= self.radius.powi(2)
+        }
+    }
+
+    pub fn bbox(self) -> LineVk {
+        LineVk {
+            p1: PointVk::new(
+                self.min_x() - self.center.position[0] - self.radius * 2.,
+                self.min_y() - self.center.position[1] - self.radius * 2.,
+                self.min_z() - self.center.position[2],
+            ),
+            p2: PointVk::new(
+                self.max_x() - self.center.position[0] + self.radius * 2.,
+                self.max_y() - self.center.position[1] + self.radius * 2.,
+                self.max_z() - self.center.position[2],
+            ),
+        }
+    }
+
+    fn min_x(self) -> f32 { self.center.position[0] - self.radius }
+
+    fn min_y(self) -> f32 { self.center.position[1] - self.radius }
+
+    fn min_z(self) -> f32 { self.center.position[2] }
+
+    fn max_x(self) -> f32 { self.center.position[0] + self.radius }
+
+    fn max_y(self) -> f32 { self.center.position[1] + self.radius }
+
+    fn max_z(self) -> f32 { self.center.position[2] }
+}
+
+pub struct Tool {
+    pub bbox: LineVk,
+    pub points: Vec<PointVk>,
+}
+
+impl Tool {
+    pub fn new_endmill(radius: f32) -> Tool {
+        let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
+        let points: Vec<PointVk> = (0..(radius * 20.0) as i32)
+            .flat_map(|x| {
+                (0..(radius * 20.0) as i32)
+                    .map(move |y| PointVk::new(x as f32 / 10.0, y as f32 / 10.0, 0.0))
+            })
+            .filter(|x| circle.in_2d_bounds(&x))
+            .map(|x| {
+                PointVk::new(
+                    x.position[0] - radius,
+                    x.position[1] - radius,
+                    x.position[2],
+                )
+            })
+            .collect();
+        Tool {
+            bbox: circle.bbox(),
+            points,
+        }
+    }
+}
+
 pub fn init_vk() -> Vk {
     let instance =
         Instance::new(None, &InstanceExtensions::none(), None).expect("failed to create instance");
@@ -80,7 +161,7 @@ pub fn init_vk() -> Vk {
 }
 
 pub fn compute_bbox(tris: &[TriangleVk], vk: &Vk) -> Vec<LineVk> {
-    let shader = cs::Shader::load(vk.device.clone()).expect("failed to create shader module");
+    let shader = bbox::Shader::load(vk.device.clone()).expect("failed to create shader module");
     let compute_pipeline = Arc::new(
         ComputePipeline::new(vk.device.clone(), &shader.main_entry_point(), &())
             .expect("failed to create compute pipeline"),
@@ -136,6 +217,83 @@ pub fn compute_bbox(tris: &[TriangleVk], vk: &Vk) -> Vec<LineVk> {
     dest_content.to_vec()
 }
 
+pub fn compute_drop(
+    tris: &[TriangleVk],
+    dest_content: &[PointVk],
+    tool: Tool,
+    vk: &Vk,
+) -> Vec<PointVk> {
+    let shader = drop::Shader::load(vk.device.clone()).expect("failed to create shader module");
+    let compute_pipeline = Arc::new(
+        ComputePipeline::new(vk.device.clone(), &shader.main_entry_point(), &())
+            .expect("failed to create compute pipeline"),
+    );
+
+    let layout = compute_pipeline.layout().descriptor_set_layout(0).unwrap();
+
+    let mut source_usage = BufferUsage::transfer_source();
+    source_usage.storage_buffer = true;
+    let (source, source_future) =
+        ImmutableBuffer::from_iter(tris.iter().copied(), source_usage, vk.queue.clone())
+            .expect("failed to create buffer");
+
+    source_future
+        .then_signal_fence_and_flush()
+        .unwrap()
+        .wait(None)
+        .unwrap();
+    let mut dest_usage = BufferUsage::transfer_destination();
+    dest_usage.storage_buffer = true;
+    let dest = CpuAccessibleBuffer::from_iter(
+        vk.device.clone(),
+        dest_usage,
+        false,
+        dest_content.iter().copied(),
+    )
+    .expect("failed to create buffer");
+
+    let mut tool_usage = BufferUsage::transfer_source();
+    tool_usage.storage_buffer = true;
+    let (tool_buffer, tool_future) =
+        ImmutableBuffer::from_data(tool, source_usage, vk.queue.clone())
+            .expect("failed to create buffer");
+    tool_future
+        .then_signal_fence_and_flush()
+        .unwrap()
+        .wait(None)
+        .unwrap();
+    let set = Arc::new(
+        PersistentDescriptorSet::start(layout.clone())
+            .add_buffer(source)
+            .unwrap()
+            .add_buffer(dest.clone())
+            .unwrap()
+            .add_buffer(tool_buffer.clone())
+            .unwrap()
+            .build()
+            .unwrap(),
+    );
+
+    let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family()).unwrap();
+    builder
+        .dispatch(
+            [dest_content.len() as u32 / 128, 1, 1],
+            compute_pipeline.clone(),
+            set,
+            (),
+        )
+        .unwrap();
+    let command_buffer = builder.build().unwrap();
+    let finished = command_buffer.execute(vk.queue.clone()).unwrap();
+    finished
+        .then_signal_fence_and_flush()
+        .unwrap()
+        .wait(None)
+        .unwrap();
+    let dest_content = dest.read().unwrap();
+    dest_content.to_vec()
+}
+
 pub fn to_tri_vk(tris: &[Triangle3d]) -> Vec<TriangleVk> {
     tris.iter()
         .map(|tri| TriangleVk {
@@ -161,9 +319,16 @@ pub fn to_line3d(line: &LineVk) -> Line3d {
     }
 }
 
-mod cs {
+mod bbox {
     vulkano_shaders::shader! {
         ty: "compute",
         path: "shaders/bbox.comp"
+    }
+}
+
+mod drop {
+    vulkano_shaders::shader! {
+        ty: "compute",
+        path: "shaders/drop.comp"
     }
 }

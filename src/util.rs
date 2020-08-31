@@ -1,5 +1,6 @@
-use crate::geo::Triangle3d;
+use crate::geo::*;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use rayon::prelude::*;
 use std::{
     fs::File,
     io::{BufReader, Error, ErrorKind, Result},
@@ -139,4 +140,42 @@ pub fn to_triangles3d(file: &BinaryStlFile) -> Vec<Triangle3d> {
             )
         })
         .collect()
+}
+
+pub fn get_bounds(tris: &[Triangle3d]) -> Line3d {
+    tris.par_iter().map(|tri| tri.bbox()).reduce(
+        || Line3d {
+            p1: Point3d {
+                x: f32::MAX,
+                y: f32::MAX,
+                z: f32::MAX,
+            },
+            p2: Point3d {
+                x: f32::MIN,
+                y: f32::MIN,
+                z: f32::MIN,
+            },
+        },
+        |mut acc, bbox| {
+            if bbox.p1.x < acc.p1.x {
+                acc.p1.x = bbox.p1.x;
+            }
+            if bbox.p1.y < acc.p1.y {
+                acc.p1.y = bbox.p1.y;
+            }
+            if bbox.p1.z < acc.p1.z {
+                acc.p1.z = bbox.p1.z;
+            }
+            if bbox.p2.x > acc.p2.x {
+                acc.p2.x = bbox.p2.x;
+            }
+            if bbox.p2.y > acc.p2.y {
+                acc.p2.y = bbox.p2.y;
+            }
+            if bbox.p2.z > acc.p2.z {
+                acc.p2.z = bbox.p2.z;
+            }
+            acc
+        },
+    )
 }
