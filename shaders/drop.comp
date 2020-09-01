@@ -32,7 +32,7 @@ layout(set = 0, binding = 2) readonly buffer Tool {
 } tool;
 
 bool ray_tri_intersect(in vec3 O, in Triangle tri, out float hit) {
-    vec3 D = vec3(0,0,-1);
+    vec3 D = vec3(0,0,1);
     vec3 e1 = tri.p2 - tri.p1; //SUB(e1, V2, V1);
     vec3 e2 = tri.p3 - tri.p1; //SUB(e2, V3, V1);
     vec3 P = cross(D, e2); //CROSS(P, D, e2);
@@ -48,7 +48,7 @@ bool ray_tri_intersect(in vec3 O, in Triangle tri, out float hit) {
     float t = dot(e2, Q) * inv_det; //t = DOT(e2, Q) * inv_det;
     if (t > EPSILON) {
         //hit = O[2] + t * D[2];
-        hit = t * D[2];
+        hit = O[2] + t * D[2];
         return true;
     }
     return false;
