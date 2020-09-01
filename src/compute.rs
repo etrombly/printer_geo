@@ -131,6 +131,33 @@ impl Tool {
             points,
         }
     }
+
+    pub fn new_v_bit(radius: f32, angle: f32) -> Tool {
+        let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
+        let percent = (90. - (angle / 2.)).to_radians().tan();
+        let points: Vec<PointVk> = (0..(radius * 20.0) as i32)
+            .flat_map(|x| {
+                (0..(radius * 20.0) as i32)
+                    .filter_map(move |y| {
+                        let x = x as f32 / 10.0;
+                        let y = y as f32 / 10.0;
+                        if circle.in_2d_bounds(&PointVk::new(x, y, 0.)){
+                            let x = x - radius;
+                            let y = y - radius;
+                            let distance = (x.powi(2) + y.powi(2)).sqrt();
+                            let z = distance * percent;
+                            Some(PointVk::new(x, y, z))
+                        } else {
+                            None
+                        }
+                    })
+            })
+            .collect();
+        Tool {
+            bbox: circle.bbox(),
+            points,
+        }
+    }
 }
 
 pub fn init_vk() -> Vk {

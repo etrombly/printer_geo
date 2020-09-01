@@ -26,12 +26,12 @@ layout(set = 0, binding = 1) buffer Points {
     Point point[];
 } points;
 
-layout(set = 0, binding = 2) buffer Tool {
+layout(set = 0, binding = 2) readonly buffer Tool {
     BBox bbox;
     Point point[];
 } tool;
 
-bool intersect2(in vec3 O, in Triangle tri, out float hit) {
+bool ray_tri_intersect(in vec3 O, in Triangle tri, out float hit) {
     vec3 D = vec3(0,0,-1);
     vec3 e1 = tri.p2 - tri.p1; //SUB(e1, V2, V1);
     vec3 e2 = tri.p3 - tri.p1; //SUB(e2, V3, V1);
@@ -71,7 +71,7 @@ void main() {
         if (in_bounds(tool.bbox.p1 + points.point[idx].point, tool.bbox.p2 + points.point[idx].point, tris.tri[i])) {
             for(int j = 0; j <= tool.point.length(); j++) {
                 float hit = 0;
-                bool intersection = intersect2(points.point[idx].point + tool.point[j].point, tris.tri[i], hit);
+                bool intersection = ray_tri_intersect(points.point[idx].point + tool.point[j].point, tris.tri[i], hit);
                 if (intersection && hit > points.point[idx].point[2]) {
                     points.point[idx].point[2] = hit;
                 }
