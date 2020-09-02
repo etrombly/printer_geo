@@ -9,6 +9,7 @@ use vulkano::{
     pipeline::ComputePipeline,
     sync::GpuFuture,
 };
+use std::ops::Add;
 
 pub struct Vk {
     pub device: Arc<Device>,
@@ -36,6 +37,16 @@ impl fmt::Debug for PointVk {
             .field("y", &self.position[1])
             .field("z", &self.position[2])
             .finish()
+    }
+}
+
+impl Add<PointVk> for PointVk {
+    type Output = PointVk;
+
+    fn add(self, other: PointVk) -> PointVk {
+        PointVk {
+            position: [self.position[0] + other.position[0], self.position[1] + other.position[1], self.position[2] + other.position[2]]
+        }
     }
 }
 
@@ -139,9 +150,9 @@ pub struct Tool {
 impl Tool {
     pub fn new_endmill(radius: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
-        let points: Vec<PointVk> = (0..(radius * 20.0) as i32)
+        let points: Vec<PointVk> = (0..=(radius * 20.0) as i32)
             .flat_map(|x| {
-                (0..(radius * 20.0) as i32)
+                (0..=(radius * 20.0) as i32)
                     .map(move |y| PointVk::new(x as f32 / 10.0, y as f32 / 10.0, 0.0))
             })
             .filter(|x| circle.in_2d_bounds(&x))
@@ -162,9 +173,9 @@ impl Tool {
     pub fn new_v_bit(radius: f32, angle: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
         let percent = (90. - (angle / 2.)).to_radians().tan();
-        let points: Vec<PointVk> = (0..(radius * 20.0) as i32)
+        let points: Vec<PointVk> = (0..=(radius * 20.0) as i32)
             .flat_map(|x| {
-                (0..(radius * 20.0) as i32).filter_map(move |y| {
+                (0..=(radius * 20.0) as i32).filter_map(move |y| {
                     let x = x as f32 / 10.0;
                     let y = y as f32 / 10.0;
                     if circle.in_2d_bounds(&PointVk::new(x, y, 0.)) {
