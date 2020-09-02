@@ -3,6 +3,14 @@ use std::{cmp::Ordering, ops::Add};
 
 pub type Point3d = Point3<f32>;
 
+pub fn is_point_inf(point: &Point3d) -> bool {
+    point.iter().any(|x| x.is_infinite())
+}
+
+pub fn is_point_nan(point: &Point3d) -> bool {
+    point.iter().any(|x| x.is_nan())
+}
+
 const PRECISION: f32 = 0.001;
 
 pub trait Intersect<RHS = Self> {
@@ -57,18 +65,17 @@ impl Intersect<Plane> for Line3d {
         let fac = n.dot(&w) / orthogonal;
         let v = direction * fac;
         let answer = Point3d::from_homogeneous(self.p1.to_homogeneous() + v);
-        println!("{:?}", answer);
         // checking for fac size handles finite lines, may want to change for
         // ray tracing
-        // if answer.is_infinite() || (fac < 0.0 || fac > 1.0) {
-        // None
-        // } else if answer.is_nan() {
-        // Some(Shape::Line3d(self))
-        // } else {
-        // Some(Shape::Point3d(answer.unwrap()))
-        // }
-        None
-    }
+        if answer.iter().any(|x| is_point_inf(x)) || (fac < 0.0 || fac > 1.0) {
+         None
+         } else if answer.iter().any(|x| is_point_nan(x)) {
+         Some(Shape::Line3d(self))
+         } else {
+         Some(Shape::Point3d(answer.unwrap()))
+         }
+
+        }
 }
 
 impl Bounds for Line3d {
