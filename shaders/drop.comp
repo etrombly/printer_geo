@@ -69,15 +69,14 @@ bool in_bounds(in vec3 min_in, in vec3 max_in, in Triangle tri) {
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
+    uint idy = gl_GlobalInvocationID.y;
     for(int i = 0; i <= tris.tri.length(); i++) {
         if (in_bounds(tbounds.bbox.p1 + points.point[idx].point, tbounds.bbox.p2 + points.point[idx].point, tris.tri[i])) {
-            for(int j = 0; j <= tool.point.length(); j++) {
                 float hit = 0;
-                bool intersection = ray_tri_intersect(points.point[idx].point + tool.point[j].point, tris.tri[i], hit);
+                bool intersection = ray_tri_intersect(points.point[idx].point + tool.point[idy].point, tris.tri[i], hit);
                 if (intersection && hit > points.point[idx].point[2]) {
                     points.point[idx].point[2] = hit;
                 }
-            }
         }
     }
 }
