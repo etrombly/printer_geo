@@ -308,10 +308,6 @@ pub fn compute_drop(
         .unwrap();
     let mut dest_usage = BufferUsage::transfer_destination();
     dest_usage.storage_buffer = true;
-    let extra = dest_content.len() % 64 ;
-    let len = dest_content.len();
-    let mut dest_content = dest_content.to_vec();
-    dest_content.resize(len + extra, Default::default());
     let dest = CpuAccessibleBuffer::from_iter(
         vk.device.clone(),
         dest_usage,
@@ -357,7 +353,7 @@ pub fn compute_drop(
     let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family()).unwrap();
     builder
         .dispatch(
-            [dest_content.len() as u32 / 64, tool.points.len() as u32, 1],
+            [(dest_content.len() as u32 / 64) + 1, tool.points.len() as u32, 1],
             compute_pipeline.clone(),
             set,
             (),
@@ -370,9 +366,8 @@ pub fn compute_drop(
         .unwrap()
         .wait(None)
         .unwrap();
-    let mut dest_content = dest.read().unwrap().to_vec();
-    dest_content.resize(len, Default::default());
-    dest_content
+    let dest_content = dest.read().unwrap();
+    dest_content.to_vec()
 }
 
 pub fn to_tri_vk(tris: &[Triangle3d]) -> Vec<TriangleVk> {
