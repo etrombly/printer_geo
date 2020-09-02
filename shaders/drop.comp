@@ -26,8 +26,11 @@ layout(set = 0, binding = 1) buffer Points {
     Point point[];
 } points;
 
-layout(set = 0, binding = 2) readonly buffer Tool {
+layout(set = 0, binding = 2) readonly buffer TBounds {
     BBox bbox;
+} tbounds;
+
+layout(set = 0, binding = 3) readonly buffer Tool {
     Point point[];
 } tool;
 
@@ -47,7 +50,6 @@ bool ray_tri_intersect(in vec3 O, in Triangle tri, out float hit) {
     if(v < 0 || u + v  > 1) return false; //if(v < 0.f || u + v  > 1.f) return 0;
     float t = dot(e2, Q) * inv_det; //t = DOT(e2, Q) * inv_det;
     if (t > EPSILON) {
-        //hit = O[2] + t * D[2];
         hit = O[2] + t * D[2];
         return true;
     }
@@ -68,7 +70,7 @@ bool in_bounds(in vec3 min_in, in vec3 max_in, in Triangle tri) {
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     for(int i = 0; i <= tris.tri.length(); i++) {
-        if (in_bounds(tool.bbox.p1 + points.point[idx].point, tool.bbox.p2 + points.point[idx].point, tris.tri[i])) {
+        if (in_bounds(tbounds.bbox.p1 + points.point[idx].point, tbounds.bbox.p2 + points.point[idx].point, tris.tri[i])) {
             for(int j = 0; j <= tool.point.length(); j++) {
                 float hit = 0;
                 bool intersection = ray_tri_intersect(points.point[idx].point + tool.point[j].point, tris.tri[i], hit);

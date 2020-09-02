@@ -46,10 +46,37 @@ pub struct TriangleVk {
     pub p3: PointVk,
 }
 
+impl TriangleVk {
+    pub fn new(p1: (f32, f32, f32), p2: (f32, f32, f32), p3: (f32, f32, f32)) -> TriangleVk {
+        TriangleVk {
+            p1: PointVk::new(p1.0, p1.1, p1.2),
+            p2: PointVk::new(p2.0, p2.1, p2.2),
+            p3: PointVk::new(p3.0, p3.1, p3.2),
+        }
+    }
+
+    pub fn in_2d_bounds(&self, bbox: &LineVk) -> bool {
+        bbox.in_2d_bounds(&self.p1) || bbox.in_2d_bounds(&self.p2) || bbox.in_2d_bounds(&self.p3)
+    }
+}
+
 #[derive(Default, Debug, Copy, Clone)]
 pub struct LineVk {
     pub p1: PointVk,
     pub p2: PointVk,
+}
+
+impl LineVk {
+    pub fn new(p1: (f32, f32, f32), p2: (f32, f32, f32)) -> LineVk {
+        LineVk {
+            p1: PointVk::new(p1.0, p1.1, p1.2),
+            p2: PointVk::new(p2.0, p2.1, p2.2),
+        }
+    }
+
+    pub fn in_2d_bounds(&self, point: &PointVk) -> bool {
+        point.position[0] >= self.p1.position[0] && point.position[0] <= self.p2.position[0] && point.position[1] >= self.p1.position[1] && point.position[1] <= self.p2.position[1]
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -103,6 +130,7 @@ impl CircleVk {
     fn max_z(self) -> f32 { self.center.position[2] }
 }
 
+#[derive(Default, Clone)]
 pub struct Tool {
     pub bbox: LineVk,
     pub points: Vec<PointVk>,
@@ -245,7 +273,7 @@ pub fn compute_bbox(tris: &[TriangleVk], vk: &Vk) -> Vec<LineVk> {
 pub fn compute_drop(
     tris: &[TriangleVk],
     dest_content: &[PointVk],
-    tool: Tool,
+    tool: &Tool,
     vk: &Vk,
 ) -> Vec<PointVk> {
     let shader = drop::Shader::load(vk.device.clone()).expect("failed to create shader module");
@@ -269,6 +297,10 @@ pub fn compute_drop(
         .unwrap();
     let mut dest_usage = BufferUsage::transfer_destination();
     dest_usage.storage_buffer = true;
+    let extra = dest_content.len() % 64 ;
+    let len = dest_content.len();
+    let mut dest_content = dest_content.to_vec();
+    dest_content.resize(len + extra, Default::default());
     let dest = CpuAccessibleBuffer::from_iter(
         vk.device.clone(),
         dest_usage,
@@ -277,21 +309,33 @@ pub fn compute_drop(
     )
     .expect("failed to create buffer");
 
-    let mut tool_usage = BufferUsage::transfer_source();
-    tool_usage.storage_buffer = true;
-    let (tool_buffer, tool_future) =
-        ImmutableBuffer::from_data(tool, source_usage, vk.queue.clone())
+    let mut bbox_usage = BufferUsage::transfer_source();
+    bbox_usage.storage_buffer = true;
+    let (bbox_buffer, bbox_future) =
+        ImmutableBuffer::from_data(tool.bbox.clone(), source_usage, vk.queue.clone())
             .expect("failed to create buffer");
-    tool_future
+    bbox_future
         .then_signal_fence_and_flush()
         .unwrap()
         .wait(None)
         .unwrap();
+        let mut tool_usage = BufferUsage::transfer_source();
+        tool_usage.storage_buffer = true;
+        let (tool_buffer, tool_future) =
+            ImmutableBuffer::from_iter(tool.points.iter().copied(), source_usage, vk.queue.clone())
+                .expect("failed to create buffer");
+        tool_future
+            .then_signal_fence_and_flush()
+            .unwrap()
+            .wait(None)
+            .unwrap();
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
             .add_buffer(source)
             .unwrap()
             .add_buffer(dest.clone())
+            .unwrap()
+            .add_buffer(bbox_buffer.clone())
             .unwrap()
             .add_buffer(tool_buffer.clone())
             .unwrap()
@@ -315,8 +359,9 @@ pub fn compute_drop(
         .unwrap()
         .wait(None)
         .unwrap();
-    let dest_content = dest.read().unwrap();
-    dest_content.to_vec()
+    let mut dest_content = dest.read().unwrap().to_vec();
+    dest_content.resize(len, Default::default());
+    dest_content
 }
 
 pub fn to_tri_vk(tris: &[Triangle3d]) -> Vec<TriangleVk> {
