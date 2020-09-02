@@ -1,19 +1,13 @@
-use std::{
-    cmp::Ordering,
-    ops::{Add, Mul, Sub},
-};
+use nalgebra::{distance, Point3};
+use std::{cmp::Ordering, ops::Add};
+
+pub type Point3d = Point3<f32>;
 
 const PRECISION: f32 = 0.001;
 
 pub trait Intersect<RHS = Self> {
     type Output;
     fn intersect(self, rhs: RHS) -> Self::Output;
-}
-
-pub trait Support<RHS = Self> {
-    type Output;
-    fn dot(self, rhs: RHS) -> Self::Output;
-    fn cross(&self, rhs: &RHS) -> Self;
 }
 
 pub trait Bounds {
@@ -26,112 +20,7 @@ pub trait Bounds {
     fn max_z(self) -> f32;
 }
 
-#[derive(PartialEq, Clone, Copy, Debug, Default)]
-pub struct Point3d {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-}
-
-impl Point3d {
-    pub fn new(x: f32, y: f32, z: f32) -> Point3d { Point3d { x, y, z } }
-
-    pub fn sum(&self) -> f32 { self.x + self.y + self.z }
-
-    pub fn is_infinite(&self) -> bool {
-        self.x.is_infinite() || self.y.is_infinite() || self.z.is_infinite()
-    }
-
-    pub fn is_nan(&self) -> bool {
-        !self.is_infinite() && (self.x.is_nan() || self.y.is_nan() || self.z.is_nan())
-    }
-
-    pub fn distance(&self, other: &Point3d) -> f32 {
-        ((self.x - other.x).powi(2) + (self.y - other.y).powi(2) + (self.z - other.z).powi(2))
-            .sqrt()
-    }
-}
-
-impl Support<Point3d> for Point3d {
-    type Output = f32;
-
-    fn dot(self, other: Point3d) -> f32 {
-        //(self 
-        //(self * other).sum()
-        self.x
-            .mul_add(other.x, self.y.mul_add(other.y, self.z * other.z))
-    }
-
-    fn cross(&self, other: &Point3d) -> Point3d {
-        Point3d::new(
-            self.y * other.z - self.z * other.y,
-            self.z * other.x - self.x * other.z,
-            self.x * other.y - self.y * other.x,
-        )
-    }
-}
-
-impl Add<Point3d> for Point3d {
-    type Output = Point3d;
-
-    fn add(self, other: Point3d) -> Point3d {
-        Point3d {
-            x: self.x + other.x,
-            y: self.y + other.y,
-            z: self.z + other.z,
-        }
-    }
-}
-
-impl Sub<Point3d> for Point3d {
-    type Output = Point3d;
-
-    fn sub(self, other: Point3d) -> Point3d {
-        Point3d {
-            x: self.x - other.x,
-            y: self.y - other.y,
-            z: self.z - other.z,
-        }
-    }
-}
-
-impl Mul<Point3d> for Point3d {
-    type Output = Point3d;
-
-    fn mul(self, other: Point3d) -> Point3d {
-        Point3d {
-            x: self.x * other.x,
-            y: self.y * other.y,
-            z: self.z * other.z,
-        }
-    }
-}
-
-impl Mul<f32> for Point3d {
-    type Output = Point3d;
-
-    fn mul(self, f: f32) -> Point3d {
-        Point3d {
-            x: self.x * f,
-            y: self.y * f,
-            z: self.z * f,
-        }
-    }
-}
-
-impl Mul<Point3d> for f32 {
-    type Output = Point3d;
-
-    fn mul(self, point: Point3d) -> Point3d {
-        Point3d {
-            x: point.x * self,
-            y: point.y * self,
-            z: point.z * self,
-        }
-    }
-}
-
-#[derive(PartialEq, Clone, Copy, Debug, Default)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub struct Line3d {
     pub p1: Point3d,
     pub p2: Point3d,
@@ -148,7 +37,8 @@ impl Line3d {
     pub fn from_points(p1: &Point3d, p2: &Point3d) -> Line3d { Line3d { p1: *p1, p2: *p2 } }
 
     pub fn on_line(&self, point: &Point3d) -> bool {
-        (self.p1.distance(point) + self.p2.distance(point)) - self.p1.distance(&self.p2) < PRECISION
+        (distance(&self.p1, point) + distance(&self.p2, point)) - distance(&self.p1, &self.p2)
+            < PRECISION
     }
 
     pub fn in_2d_bounds(&self, point: &Point3d) -> bool {
@@ -160,37 +50,32 @@ impl Intersect<Plane> for Line3d {
     type Output = Option<Shape>;
 
     fn intersect(self, plane: Plane) -> Option<Shape> {
-        let direction = self.p2 - self.p1;
-        let orthogonal = plane.n.dot(direction);
-        let w = plane.p - self.p1;
-        let fac = plane.n.dot(w) / orthogonal;
+        let direction = (self.p2 - self.p1).to_homogeneous();
+        let n = plane.n.to_homogeneous();
+        let orthogonal = n.dot(&direction);
+        let w = (plane.p - self.p1).to_homogeneous();
+        let fac = n.dot(&w) / orthogonal;
         let v = direction * fac;
-        let answer = self.p1 + v;
+        let answer = Point3d::from_homogeneous(self.p1.to_homogeneous() + v);
+        println!("{:?}", answer);
         // checking for fac size handles finite lines, may want to change for
         // ray tracing
-        if answer.is_infinite() || (fac < 0.0 || fac > 1.0) {
-            None
-        } else if answer.is_nan() {
-            Some(Shape::Line3d(self))
-        } else {
-            Some(Shape::Point3d(answer))
-        }
+        // if answer.is_infinite() || (fac < 0.0 || fac > 1.0) {
+        // None
+        // } else if answer.is_nan() {
+        // Some(Shape::Line3d(self))
+        // } else {
+        // Some(Shape::Point3d(answer.unwrap()))
+        // }
+        None
     }
 }
 
 impl Bounds for Line3d {
     fn bbox(self) -> Line3d {
         Line3d {
-            p1: Point3d {
-                x: self.min_x(),
-                y: self.min_y(),
-                z: self.min_z(),
-            },
-            p2: Point3d {
-                x: self.max_x(),
-                y: self.max_y(),
-                z: self.max_z(),
-            },
+            p1: Point3d::new(self.min_x(), self.min_y(), self.min_z()),
+            p2: Point3d::new(self.max_x(), self.max_y(), self.max_z()),
         }
     }
 
@@ -212,8 +97,10 @@ impl Add<Line3d> for Line3d {
 
     fn add(self, other: Line3d) -> Line3d {
         Line3d {
-            p1: self.p1 + other.p1,
-            p2: self.p2 + other.p2,
+            p1: Point3d::from_homogeneous(self.p1.to_homogeneous() + other.p1.to_homogeneous())
+                .unwrap(),
+            p2: Point3d::from_homogeneous(self.p2.to_homogeneous() + other.p2.to_homogeneous())
+                .unwrap(),
         }
     }
 }
@@ -290,18 +177,20 @@ impl Intersect<Line3d> for Triangle3d {
     type Output = Option<Point3d>;
 
     fn intersect(self, line: Line3d) -> Option<Point3d> {
-        let p1 = self.p2 - self.p1;
-        let p2 = self.p3 - self.p1;
+        let p1 = (self.p2 - self.p1).to_homogeneous();
+        let p2 = (self.p3 - self.p1).to_homogeneous();
+        let lp1 = line.p1.to_homogeneous();
+        let lp2 = line.p2.to_homogeneous();
         let n = p1.cross(&p2);
-        let det = -line.p2.dot(n);
+        let det = -lp2.dot(&n);
         let inv_det = 1.0 / det;
-        let ao = line.p1 - self.p1;
-        let dao = ao.cross(&line.p2);
-        let u = p2.dot(dao) * inv_det;
-        let v = -p1.dot(dao) * inv_det;
-        let t = ao.dot(n) * inv_det;
+        let ao = lp1 - self.p1.to_homogeneous();
+        let dao = ao.cross(&lp2);
+        let u = p2.dot(&dao) * inv_det;
+        let v = -p1.dot(&dao) * inv_det;
+        let t = ao.dot(&n) * inv_det;
         if det >= 1e-6 && t >= 0.0 && u >= 0.0 && v >= 0.0 && (u + v) <= 1.0 {
-            Some(line.p1 + t * line.p2)
+            Point3d::from_homogeneous(lp1 + t * lp2)
         } else {
             None
         }
@@ -311,16 +200,8 @@ impl Intersect<Line3d> for Triangle3d {
 impl Bounds for Triangle3d {
     fn bbox(self) -> Line3d {
         Line3d {
-            p1: Point3d {
-                x: self.min_x(),
-                y: self.min_y(),
-                z: self.min_z(),
-            },
-            p2: Point3d {
-                x: self.max_x(),
-                y: self.max_y(),
-                z: self.max_z(),
-            },
+            p1: Point3d::new(self.min_x(), self.min_y(), self.min_z()),
+            p2: Point3d::new(self.max_x(), self.max_y(), self.max_z()),
         }
     }
 
@@ -379,16 +260,8 @@ impl Circle {
 impl Bounds for Circle {
     fn bbox(self) -> Line3d {
         Line3d {
-            p1: Point3d {
-                x: self.min_x(),
-                y: self.min_y(),
-                z: self.min_z(),
-            },
-            p2: Point3d {
-                x: self.max_x(),
-                y: self.max_y(),
-                z: self.max_z(),
-            },
+            p1: Point3d::new(self.min_x(), self.min_y(), self.min_z()),
+            p2: Point3d::new(self.max_x(), self.max_y(), self.max_z()),
         }
     }
 
