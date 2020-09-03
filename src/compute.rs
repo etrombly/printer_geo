@@ -9,37 +9,51 @@ use vulkano::{
     pipeline::ComputePipeline,
     sync::GpuFuture,
 };
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum VkError {
+    #[error("Unable to create vulkan instance")]
+    Instance(#[from] vulkano::instance::InstanceCreationError),
+    #[error("No vulkan device available")]
+    PhysicalDevice,
+    #[error("Device does not support graphics operations")]
+    Graphics,
+    #[error("Could not create vulkan device")]
+    Device(#[from] vulkano::device::DeviceCreationError),
+    #[error("No queue available for vulkan device")]
+    Queue,
+}
 
 pub struct Vk {
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
 }
 
-pub fn init_vk() -> Vk {
-    let instance =
-        Instance::new(None, &InstanceExtensions::none(), None).expect("failed to create instance");
-    let physical = PhysicalDevice::enumerate(&instance)
-        .next()
-        .expect("no device available");
-    let queue_family = physical
-        .queue_families()
-        .find(|&q| q.supports_graphics())
-        .expect("couldn't find a graphical queue family");
-    let (device, mut queues) = {
-        Device::new(
-            physical,
-            &Features::none(),
-            &DeviceExtensions {
-                khr_storage_buffer_storage_class: true,
-                ..DeviceExtensions::none()
-            },
-            [(queue_family, 0.5)].iter().cloned(),
-        )
-        .expect("failed to create device")
-    };
-    let queue = queues.next().unwrap();
+impl Vk {
+    pub fn new() -> Result<Vk, VkError> {
+        let instance =
+            Instance::new(None, &InstanceExtensions::none(), None)?;
+        let physical = PhysicalDevice::enumerate(&instance)
+            .next().ok_or_else(|| VkError::PhysicalDevice)?;
+        let queue_family = physical
+            .queue_families()
+            .find(|&q| q.supports_graphics()).ok_or_else(|| VkError::Graphics)?;
+        let (device, mut queues) = {
+            Device::new(
+                physical,
+                &Features::none(),
+                &DeviceExtensions {
+                    khr_storage_buffer_storage_class: true,
+                    ..DeviceExtensions::none()
+                },
+                [(queue_family, 0.5)].iter().cloned(),
+            )?
+        };
+        let queue = queues.next().ok_or_else(|| VkError::Queue)?;
 
-    Vk { device, queue }
+        Ok(Vk { device, queue })
+    }
 }
 
 pub fn compute_drop(
