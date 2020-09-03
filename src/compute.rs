@@ -1,5 +1,6 @@
 pub use crate::geo_vulkan::*;
 use std::sync::Arc;
+use thiserror::Error;
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer, ImmutableBuffer},
     command_buffer::{AutoCommandBufferBuilder, CommandBuffer},
@@ -9,7 +10,6 @@ use vulkano::{
     pipeline::ComputePipeline,
     sync::GpuFuture,
 };
-use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum VkError {
@@ -25,6 +25,32 @@ pub enum VkError {
     Queue,
 }
 
+#[derive(Error, Debug)]
+pub enum ComputeError {
+    #[error("Failed to create compute shader")]
+    Shader(#[from] vulkano::OomError),
+    #[error("Failed to create compute pipeline")]
+    Pipeline(#[from] vulkano::pipeline::ComputePipelineCreationError),
+    #[error("Could not allocate graphics memory")]
+    Malloc(#[from] vulkano::memory::DeviceMemoryAllocError),
+    #[error("Vulkan flush error")]
+    Flush(#[from] vulkano::sync::FlushError),
+    #[error("Error creating persistent descriptor set")]
+    Set(#[from] vulkano::descriptor::descriptor_set::PersistentDescriptorSetError),
+    #[error("Error building persistent descriptor set")]
+    BuildSet(#[from] vulkano::descriptor::descriptor_set::PersistentDescriptorSetBuildError),
+    #[error("Error dispatching compute shader")]
+    Dispatch(#[from] vulkano::command_buffer::DispatchError),
+    #[error("Error building command buffer")]
+    CommandBuild(#[from] vulkano::command_buffer::BuildError),
+    #[error("Error executing command buffer")]
+    CommandBufferExec(#[from] vulkano::command_buffer::CommandBufferExecError),
+    #[error("Error locking buffer for reading")]
+    ReadLock(#[from] vulkano::buffer::cpu_access::ReadLockError),
+    #[error("Could not retreive descriptor set layout")]
+    Layout,
+}
+
 pub struct Vk {
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
@@ -32,13 +58,14 @@ pub struct Vk {
 
 impl Vk {
     pub fn new() -> Result<Vk, VkError> {
-        let instance =
-            Instance::new(None, &InstanceExtensions::none(), None)?;
+        let instance = Instance::new(None, &InstanceExtensions::none(), None)?;
         let physical = PhysicalDevice::enumerate(&instance)
-            .next().ok_or_else(|| VkError::PhysicalDevice)?;
+            .next()
+            .ok_or_else(|| VkError::PhysicalDevice)?;
         let queue_family = physical
             .queue_families()
-            .find(|&q| q.supports_graphics()).ok_or_else(|| VkError::Graphics)?;
+            .find(|&q| q.supports_graphics())
+            .ok_or_else(|| VkError::Graphics)?;
         let (device, mut queues) = {
             Device::new(
                 physical,
@@ -61,77 +88,60 @@ pub fn compute_drop(
     dest_content: &[PointVk],
     tool: &Tool,
     vk: &Vk,
-) -> Vec<PointVk> {
-    let shader = drop::Shader::load(vk.device.clone()).expect("failed to create shader module");
-    let compute_pipeline = Arc::new(
-        ComputePipeline::new(vk.device.clone(), &shader.main_entry_point(), &())
-            .expect("failed to create compute pipeline"),
-    );
+) -> Result<Vec<PointVk>, ComputeError> {
+    let shader = drop::Shader::load(vk.device.clone())?;
+    let compute_pipeline = Arc::new(ComputePipeline::new(
+        vk.device.clone(),
+        &shader.main_entry_point(),
+        &(),
+    )?);
 
-    let layout = compute_pipeline.layout().descriptor_set_layout(0).unwrap();
+    let layout = compute_pipeline
+        .layout()
+        .descriptor_set_layout(0)
+        .ok_or_else(|| ComputeError::Layout)?;
 
     let mut usage = BufferUsage::transfer_source();
     usage.storage_buffer = true;
     let (source, source_future) =
-        ImmutableBuffer::from_iter(tris.iter().copied(), usage, vk.queue.clone())
-            .expect("failed to create buffer");
+        ImmutableBuffer::from_iter(tris.iter().copied(), usage, vk.queue.clone())?;
 
-    source_future
-        .then_signal_fence_and_flush()
-        .unwrap()
-        .wait(None)
-        .unwrap();
+    source_future.then_signal_fence_and_flush()?.wait(None)?;
 
     let dest = CpuAccessibleBuffer::from_iter(
         vk.device.clone(),
         usage,
         false,
         dest_content.iter().copied(),
-    )
-    .expect("failed to create buffer");
+    )?;
 
     let (tool_buffer, tool_future) =
-        ImmutableBuffer::from_iter(tool.points.iter().copied(), usage, vk.queue.clone())
-            .expect("failed to create buffer");
-    tool_future
-        .then_signal_fence_and_flush()
-        .unwrap()
-        .wait(None)
-        .unwrap();
+        ImmutableBuffer::from_iter(tool.points.iter().copied(), usage, vk.queue.clone())?;
+    tool_future.then_signal_fence_and_flush()?.wait(None)?;
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
-            .add_buffer(source)
-            .unwrap()
-            .add_buffer(dest.clone())
-            .unwrap()
-            .add_buffer(tool_buffer)
-            .unwrap()
-            .build()
-            .unwrap(),
+            .add_buffer(source)?
+            .add_buffer(dest.clone())?
+            .add_buffer(tool_buffer)?
+            .build()?,
     );
 
-    let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family()).unwrap();
-    builder
-        .dispatch(
-            [
-                (dest_content.len() as u32 / 64) + 1,
-                tool.points.len() as u32,
-                1,
-            ],
-            compute_pipeline.clone(),
-            set,
-            (),
-        )
-        .unwrap();
-    let command_buffer = builder.build().unwrap();
-    let finished = command_buffer.execute(vk.queue.clone()).unwrap();
-    finished
-        .then_signal_fence_and_flush()
-        .unwrap()
-        .wait(None)
-        .unwrap();
-    let dest_content = dest.read().unwrap();
-    dest_content.to_vec()
+    let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
+    builder.dispatch(
+        [
+            (dest_content.len() as u32 / 64) + 1,
+            tool.points.len() as u32,
+            1,
+        ],
+        compute_pipeline.clone(),
+        set,
+        (),
+    )?;
+    let command_buffer = builder.build()?;
+    let finished = command_buffer.execute(vk.queue.clone())?;
+    finished.then_signal_fence_and_flush()?.wait(None)?;
+    let dest_content = dest.read()?;
+    Ok(dest_content.to_vec())
 }
 
 mod drop {
