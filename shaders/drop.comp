@@ -1,5 +1,5 @@
 #version 450
-#define EPSILON 0.0000001
+#define EPSILON 0.00001
 
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
@@ -13,11 +13,6 @@ struct Triangle {
     vec3 p3;
 };
 
-struct BBox {
-    vec3 p1;
-    vec3 p2;
-};
-
 layout(set = 0, binding = 0) readonly buffer Triangles {
     Triangle tri[];
 } tris;
@@ -26,42 +21,28 @@ layout(set = 0, binding = 1) buffer Points {
     Point point[];
 } points;
 
-layout(set = 0, binding = 2) readonly buffer TBounds {
-    BBox bbox;
-} tbounds;
-
-layout(set = 0, binding = 3) readonly buffer Tool {
+layout(set = 0, binding = 2) readonly buffer Tool {
     Point point[];
 } tool;
 
 bool ray_tri_intersect(in vec3 O, in Triangle tri, out float hit) {
+    // hard code the direction as casting up
     vec3 D = vec3(0,0,1);
-    vec3 e1 = tri.p2 - tri.p1; //SUB(e1, V2, V1);
-    vec3 e2 = tri.p3 - tri.p1; //SUB(e2, V3, V1);
-    vec3 P = cross(D, e2); //CROSS(P, D, e2);
-    float det = dot(e1, P); //det = DOT(e1, P);
-    if(det > -EPSILON && det < EPSILON) return false; //if(det > -EPSILON && det < EPSILON) return 0;
-    float inv_det = 1.0 / det; //inv_det = 1.f / det;
-    vec3 T = O - tri.p1; //SUB(T, O, V1);
-    float u = dot(T, P) * inv_det; //u = DOT(T, P) * inv_det;
-    if(u < 0 || u > 1) return false; //if(u < 0.f || u > 1.f) return 0;
-    vec3 Q = cross(T, e1); //CROSS(Q, T, e1);
-    float v = dot(D, Q) * inv_det; // v = DOT(D, Q) * inv_det;
-    if(v < 0 || u + v  > 1) return false; //if(v < 0.f || u + v  > 1.f) return 0;
-    float t = dot(e2, Q) * inv_det; //t = DOT(e2, Q) * inv_det;
+    vec3 e1 = tri.p2 - tri.p1; 
+    vec3 e2 = tri.p3 - tri.p1; 
+    vec3 P = cross(D, e2);
+    float det = dot(e1, P); 
+    if(det > -EPSILON && det < EPSILON) return false; 
+    float inv_det = 1.0 / det; 
+    vec3 T = O - tri.p1; 
+    float u = dot(T, P) * inv_det; 
+    if(u < 0 || u > 1) return false; 
+    vec3 Q = cross(T, e1); 
+    float v = dot(D, Q) * inv_det; 
+    if(v < 0 || u + v  > 1) return false; 
+    float t = dot(e2, Q) * inv_det;
     if (t > EPSILON) {
         hit = O[2] + t * D[2];
-        return true;
-    }
-    return false;
-}
-
-bool in_bounds(in vec3 min_in, in vec3 max_in, in Triangle tri) {
-    float max_x = max(max(tri.p1.x, tri.p2.x), tri.p3.x);
-    float max_y = max(max(tri.p1.y, tri.p2.y), tri.p3.y);
-    float min_x = min(min(tri.p1.x, tri.p2.x), tri.p3.x);
-    float min_y = min(min(tri.p1.y, tri.p2.y), tri.p3.y);
-    if (min_x >= min_in[0] && max_x <= max_in[0] && min_y >= min_in[1] && max_y <= max_in[1]) {
         return true;
     }
     return false;
@@ -71,9 +52,12 @@ void main() {
     uint idx = gl_GlobalInvocationID.x;
     uint idy = gl_GlobalInvocationID.y;
     if (idx <= tris.tri.length()){
+        // for each triangle in this column
         for(int i = 0; i <= tris.tri.length(); i++) {
             float hit = 0;
+            // check if the current point in the tool intersects
             bool intersection = ray_tri_intersect(points.point[idx].point + tool.point[idy].point, tris.tri[i], hit);
+            // if Z is higher write it as the current Z
             if (intersection && hit > points.point[idx].point[2]) {
                 points.point[idx].point[2] = hit;
             }

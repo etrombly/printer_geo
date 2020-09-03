@@ -1,10 +1,13 @@
 use nalgebra::{distance, Point3};
+use rayon::prelude::*;
 use std::{cmp::Ordering, ops::Add};
 
 pub type Point3d = Point3<f32>;
 
+/// check if any value in point is infinite
 pub fn is_point_inf(point: &Point3d) -> bool { point.iter().any(|x| x.is_infinite()) }
 
+/// // check if any value in point is nan
 pub fn is_point_nan(point: &Point3d) -> bool { point.iter().any(|x| x.is_nan()) }
 
 const PRECISION: f32 = 0.001;
@@ -12,16 +15,6 @@ const PRECISION: f32 = 0.001;
 pub trait Intersect<RHS = Self> {
     type Output;
     fn intersect(self, rhs: RHS) -> Self::Output;
-}
-
-pub trait Bounds {
-    fn bbox(self) -> Line3d;
-    fn min_x(self) -> f32;
-    fn min_y(self) -> f32;
-    fn min_z(self) -> f32;
-    fn max_x(self) -> f32;
-    fn max_y(self) -> f32;
-    fn max_z(self) -> f32;
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -48,6 +41,25 @@ impl Line3d {
     pub fn in_2d_bounds(&self, point: &Point3d) -> bool {
         point.x >= self.p1.x && point.x <= self.p2.x && point.y >= self.p1.y && point.y <= self.p2.y
     }
+
+    pub fn bbox(self) -> Line3d {
+        Line3d {
+            p1: Point3d::new(self.min_x(), self.min_y(), self.min_z()),
+            p2: Point3d::new(self.max_x(), self.max_y(), self.max_z()),
+        }
+    }
+
+    pub fn min_x(self) -> f32 { self.p1.x.min(self.p2.x) }
+
+    pub fn min_y(self) -> f32 { self.p1.y.min(self.p2.y) }
+
+    pub fn min_z(self) -> f32 { self.p1.z.min(self.p2.z) }
+
+    pub fn max_x(self) -> f32 { self.p1.x.max(self.p2.x) }
+
+    pub fn max_y(self) -> f32 { self.p1.y.max(self.p2.y) }
+
+    pub fn max_z(self) -> f32 { self.p1.z.max(self.p2.z) }
 }
 
 impl Intersect<Plane> for Line3d {
@@ -71,27 +83,6 @@ impl Intersect<Plane> for Line3d {
             Some(Shape::Point3d(answer.unwrap()))
         }
     }
-}
-
-impl Bounds for Line3d {
-    fn bbox(self) -> Line3d {
-        Line3d {
-            p1: Point3d::new(self.min_x(), self.min_y(), self.min_z()),
-            p2: Point3d::new(self.max_x(), self.max_y(), self.max_z()),
-        }
-    }
-
-    fn min_x(self) -> f32 { self.p1.x.min(self.p2.x) }
-
-    fn min_y(self) -> f32 { self.p1.y.min(self.p2.y) }
-
-    fn min_z(self) -> f32 { self.p1.z.min(self.p2.z) }
-
-    fn max_x(self) -> f32 { self.p1.x.max(self.p2.x) }
-
-    fn max_y(self) -> f32 { self.p1.y.max(self.p2.y) }
-
-    fn max_z(self) -> f32 { self.p1.z.max(self.p2.z) }
 }
 
 impl Add<Line3d> for Line3d {
@@ -144,6 +135,25 @@ impl Triangle3d {
     pub fn in_2d_bounds(&self, bbox: &Line3d) -> bool {
         bbox.in_2d_bounds(&self.p1) || bbox.in_2d_bounds(&self.p2) || bbox.in_2d_bounds(&self.p3)
     }
+
+    pub fn bbox(self) -> Line3d {
+        Line3d {
+            p1: Point3d::new(self.min_x(), self.min_y(), self.min_z()),
+            p2: Point3d::new(self.max_x(), self.max_y(), self.max_z()),
+        }
+    }
+
+    pub fn min_x(self) -> f32 { self.p1.x.min(self.p2.x).min(self.p3.x) }
+
+    pub fn min_y(self) -> f32 { self.p1.y.min(self.p2.y).min(self.p3.y) }
+
+    pub fn min_z(self) -> f32 { self.p1.z.min(self.p2.z).min(self.p3.z) }
+
+    pub fn max_x(self) -> f32 { self.p1.x.max(self.p2.x).max(self.p3.x) }
+
+    pub fn max_y(self) -> f32 { self.p1.y.max(self.p2.y).max(self.p3.y) }
+
+    pub fn max_z(self) -> f32 { self.p1.z.max(self.p2.z).max(self.p3.z) }
 }
 
 impl Intersect<Plane> for Triangle3d {
@@ -199,27 +209,6 @@ impl Intersect<Line3d> for Triangle3d {
     }
 }
 
-impl Bounds for Triangle3d {
-    fn bbox(self) -> Line3d {
-        Line3d {
-            p1: Point3d::new(self.min_x(), self.min_y(), self.min_z()),
-            p2: Point3d::new(self.max_x(), self.max_y(), self.max_z()),
-        }
-    }
-
-    fn min_x(self) -> f32 { self.p1.x.min(self.p2.x).min(self.p3.x) }
-
-    fn min_y(self) -> f32 { self.p1.y.min(self.p2.y).min(self.p3.y) }
-
-    fn min_z(self) -> f32 { self.p1.z.min(self.p2.z).min(self.p3.z) }
-
-    fn max_x(self) -> f32 { self.p1.x.max(self.p2.x).max(self.p3.x) }
-
-    fn max_y(self) -> f32 { self.p1.y.max(self.p2.y).max(self.p3.y) }
-
-    fn max_z(self) -> f32 { self.p1.z.max(self.p2.z).max(self.p3.z) }
-}
-
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub struct Plane {
     p: Point3d,
@@ -257,27 +246,25 @@ impl Circle {
             dx.powi(2) + dy.powi(2) <= self.radius.powi(2)
         }
     }
-}
 
-impl Bounds for Circle {
-    fn bbox(self) -> Line3d {
+    pub fn bbox(self) -> Line3d {
         Line3d {
             p1: Point3d::new(self.min_x(), self.min_y(), self.min_z()),
             p2: Point3d::new(self.max_x(), self.max_y(), self.max_z()),
         }
     }
 
-    fn min_x(self) -> f32 { self.center.x - self.radius }
+    pub fn min_x(self) -> f32 { self.center.x - self.radius }
 
-    fn min_y(self) -> f32 { self.center.y - self.radius }
+    pub fn min_y(self) -> f32 { self.center.y - self.radius }
 
-    fn min_z(self) -> f32 { self.center.z }
+    pub fn min_z(self) -> f32 { self.center.z }
 
-    fn max_x(self) -> f32 { self.center.x + self.radius }
+    pub fn max_x(self) -> f32 { self.center.x + self.radius }
 
-    fn max_y(self) -> f32 { self.center.y + self.radius }
+    pub fn max_y(self) -> f32 { self.center.y + self.radius }
 
-    fn max_z(self) -> f32 { self.center.z }
+    pub fn max_z(self) -> f32 { self.center.z }
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
@@ -290,4 +277,34 @@ pub enum Shape {
 
 impl Shape {
     pub fn is_line(&self) -> bool { matches!(*self, Shape::Line3d(_)) }
+}
+
+pub fn get_bounds(tris: &[Triangle3d]) -> Line3d {
+    tris.par_iter().map(|tri| tri.bbox()).reduce(
+        || Line3d {
+            p1: Point3d::new(f32::MAX, f32::MAX, f32::MAX),
+            p2: Point3d::new(f32::MIN, f32::MIN, f32::MIN),
+        },
+        |mut acc, bbox| {
+            if bbox.p1.x < acc.p1.x {
+                acc.p1.x = bbox.p1.x;
+            }
+            if bbox.p1.y < acc.p1.y {
+                acc.p1.y = bbox.p1.y;
+            }
+            if bbox.p1.z < acc.p1.z {
+                acc.p1.z = bbox.p1.z;
+            }
+            if bbox.p2.x > acc.p2.x {
+                acc.p2.x = bbox.p2.x;
+            }
+            if bbox.p2.y > acc.p2.y {
+                acc.p2.y = bbox.p2.y;
+            }
+            if bbox.p2.z > acc.p2.z {
+                acc.p2.z = bbox.p2.z;
+            }
+            acc
+        },
+    )
 }

@@ -130,8 +130,9 @@ pub fn load_stl(file: &str) -> BinaryStlFile {
 }
 
 pub fn to_triangles3d(file: &BinaryStlFile) -> Vec<Triangle3d> {
+    // TODO: do I want to keep the normals? don't need them yet
     file.triangles
-        .iter()
+        .par_iter()
         .map(|x| {
             Triangle3d::new(
                 (x.v1[0], x.v1[1], x.v1[2]),
@@ -140,34 +141,4 @@ pub fn to_triangles3d(file: &BinaryStlFile) -> Vec<Triangle3d> {
             )
         })
         .collect()
-}
-
-pub fn get_bounds(tris: &[Triangle3d]) -> Line3d {
-    tris.par_iter().map(|tri| tri.bbox()).reduce(
-        || Line3d {
-            p1: Point3d::new(f32::MAX, f32::MAX, f32::MAX),
-            p2: Point3d::new(f32::MIN, f32::MIN, f32::MIN),
-        },
-        |mut acc, bbox| {
-            if bbox.p1.x < acc.p1.x {
-                acc.p1.x = bbox.p1.x;
-            }
-            if bbox.p1.y < acc.p1.y {
-                acc.p1.y = bbox.p1.y;
-            }
-            if bbox.p1.z < acc.p1.z {
-                acc.p1.z = bbox.p1.z;
-            }
-            if bbox.p2.x > acc.p2.x {
-                acc.p2.x = bbox.p2.x;
-            }
-            if bbox.p2.y > acc.p2.y {
-                acc.p2.y = bbox.p2.y;
-            }
-            if bbox.p2.z > acc.p2.z {
-                acc.p2.z = bbox.p2.z;
-            }
-            acc
-        },
-    )
 }
