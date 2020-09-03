@@ -1,4 +1,4 @@
-use nalgebra::{distance, Point3};
+use nalgebra::{distance, zero, Isometry3, Point3, Vector3};
 use rayon::prelude::*;
 use std::{cmp::Ordering, ops::Add};
 
@@ -134,6 +134,13 @@ impl Triangle3d {
 
     pub fn in_2d_bounds(&self, bbox: &Line3d) -> bool {
         bbox.in_2d_bounds(&self.p1) || bbox.in_2d_bounds(&self.p2) || bbox.in_2d_bounds(&self.p3)
+    }
+
+    pub fn translate(&mut self, x: f32, y: f32, z: f32) {
+        let iso = Isometry3::new(Vector3::new(x, y, z), zero());
+        self.p1 = iso.transform_point(&self.p1);
+        self.p2 = iso.transform_point(&self.p2);
+        self.p3 = iso.transform_point(&self.p3);
     }
 
     pub fn bbox(self) -> Line3d {

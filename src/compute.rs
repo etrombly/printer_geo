@@ -59,7 +59,7 @@ pub fn compute_drop(
     let mut usage = BufferUsage::transfer_source();
     usage.storage_buffer = true;
     let (source, source_future) =
-        ImmutableBuffer::from_iter(tris.iter().copied(), usage.clone(), vk.queue.clone())
+        ImmutableBuffer::from_iter(tris.iter().copied(), usage, vk.queue.clone())
             .expect("failed to create buffer");
 
     source_future
@@ -70,14 +70,14 @@ pub fn compute_drop(
 
     let dest = CpuAccessibleBuffer::from_iter(
         vk.device.clone(),
-        usage.clone(),
+        usage,
         false,
         dest_content.iter().copied(),
     )
     .expect("failed to create buffer");
 
     let (tool_buffer, tool_future) =
-        ImmutableBuffer::from_iter(tool.points.iter().copied(), usage.clone(), vk.queue.clone())
+        ImmutableBuffer::from_iter(tool.points.iter().copied(), usage, vk.queue.clone())
             .expect("failed to create buffer");
     tool_future
         .then_signal_fence_and_flush()

@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use printer_geo::{compute::*, geo::*, util::*};
+use printer_geo::{compute::*, geo::*, stl::*};
 use rayon::prelude::*;
 
 // TODO: update benchmarks
