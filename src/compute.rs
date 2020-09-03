@@ -1,5 +1,5 @@
 use crate::geo::*;
-use std::{default::Default, fmt, sync::Arc};
+use std::{default::Default, fmt, ops::Add, sync::Arc};
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer, ImmutableBuffer},
     command_buffer::{AutoCommandBufferBuilder, CommandBuffer},
@@ -9,7 +9,6 @@ use vulkano::{
     pipeline::ComputePipeline,
     sync::GpuFuture,
 };
-use std::ops::Add;
 
 pub struct Vk {
     pub device: Arc<Device>,
@@ -45,7 +44,11 @@ impl Add<PointVk> for PointVk {
 
     fn add(self, other: PointVk) -> PointVk {
         PointVk {
-            position: [self.position[0] + other.position[0], self.position[1] + other.position[1], self.position[2] + other.position[2]]
+            position: [
+                self.position[0] + other.position[0],
+                self.position[1] + other.position[1],
+                self.position[2] + other.position[2],
+            ],
         }
     }
 }
@@ -86,7 +89,10 @@ impl LineVk {
     }
 
     pub fn in_2d_bounds(&self, point: &PointVk) -> bool {
-        point.position[0] >= self.p1.position[0] && point.position[0] <= self.p2.position[0] && point.position[1] >= self.p1.position[1] && point.position[1] <= self.p2.position[1]
+        point.position[0] >= self.p1.position[0]
+            && point.position[0] <= self.p2.position[0]
+            && point.position[1] >= self.p1.position[1]
+            && point.position[1] <= self.p2.position[1]
     }
 }
 
@@ -326,16 +332,16 @@ pub fn compute_drop(
         .unwrap()
         .wait(None)
         .unwrap();
-        let mut tool_usage = BufferUsage::transfer_source();
-        tool_usage.storage_buffer = true;
-        let (tool_buffer, tool_future) =
-            ImmutableBuffer::from_iter(tool.points.iter().copied(), source_usage, vk.queue.clone())
-                .expect("failed to create buffer");
-        tool_future
-            .then_signal_fence_and_flush()
-            .unwrap()
-            .wait(None)
-            .unwrap();
+    let mut tool_usage = BufferUsage::transfer_source();
+    tool_usage.storage_buffer = true;
+    let (tool_buffer, tool_future) =
+        ImmutableBuffer::from_iter(tool.points.iter().copied(), source_usage, vk.queue.clone())
+            .expect("failed to create buffer");
+    tool_future
+        .then_signal_fence_and_flush()
+        .unwrap()
+        .wait(None)
+        .unwrap();
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
             .add_buffer(source)
@@ -353,7 +359,11 @@ pub fn compute_drop(
     let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family()).unwrap();
     builder
         .dispatch(
-            [(dest_content.len() as u32 / 64) + 1, tool.points.len() as u32, 1],
+            [
+                (dest_content.len() as u32 / 64) + 1,
+                tool.points.len() as u32,
+                1,
+            ],
             compute_pipeline.clone(),
             set,
             (),
