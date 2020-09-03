@@ -90,7 +90,7 @@ pub fn compute_drop(
             .unwrap()
             .add_buffer(dest.clone())
             .unwrap()
-            .add_buffer(tool_buffer.clone())
+            .add_buffer(tool_buffer)
             .unwrap()
             .build()
             .unwrap(),
