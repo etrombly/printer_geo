@@ -129,9 +129,9 @@ pub fn compute_drop(
     let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
     builder.dispatch(
         [
-            (dest_content.len() as u32 / 64) + 1,
-            tool.points.len() as u32,
-            1,
+            (tris.len() as u32 / 32) + 1,
+            (dest_content.len() as u32 / 32) + 1,
+            (tool.points.len() as u32 / 32) + 1,
         ],
         compute_pipeline.clone(),
         set,

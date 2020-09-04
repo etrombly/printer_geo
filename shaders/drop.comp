@@ -1,7 +1,7 @@
 #version 450
 #define EPSILON 0.00001
 
-layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 struct Point {
     vec3 point;
@@ -17,7 +17,7 @@ layout(set = 0, binding = 0) readonly buffer Triangles {
     Triangle tri[];
 } tris;
 
-layout(set = 0, binding = 1) buffer Points {
+layout(set = 0, binding = 1) coherent buffer Points {
     Point point[];
 } points;
 
@@ -51,16 +51,14 @@ bool ray_tri_intersect(in vec3 O, in Triangle tri, out float hit) {
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     uint idy = gl_GlobalInvocationID.y;
-    if (idx <= tris.tri.length()){
-        // for each triangle in this column
-        for(int i = 0; i <= tris.tri.length(); i++) {
-            float hit = 0;
-            // check if the current point in the tool intersects
-            bool intersection = ray_tri_intersect(points.point[idx].point + tool.point[idy].point, tris.tri[i], hit);
-            // if Z is higher write it as the current Z
-            if (intersection && hit > points.point[idx].point[2]) {
-                points.point[idx].point[2] = hit;
-            }
+    uint idz = gl_GlobalInvocationID.z;
+    if (idx <= tris.tri.length() && idy <= points.point.length() && idz <= tool.point.length()){
+        float hit = 0;
+        // check if the current point in the tool intersects
+        bool intersection = ray_tri_intersect(points.point[idy].point + tool.point[idz].point, tris.tri[idx], hit);
+        // if Z is higher write it as the current Z
+        if (intersection && hit > points.point[idy].point[2]) {
+            points.point[idy].point[2] = hit;
         }
     }
 }
