@@ -140,8 +140,8 @@ impl Tool {
     pub fn new_endmill(radius: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
         let scale = match radius {
-            x if x < 1.0 => 400.,
-            x if x < 3.0 => 200.,
+            x if x < 0.6 => 400.,
+            x if x < 1.5 => 200.,
             _ => 100.,
         };
         let points: Vec<PointVk> = (0..=(radius * scale) as i32)
@@ -168,14 +168,14 @@ impl Tool {
     pub fn new_v_bit(radius: f32, angle: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
         let scale = match radius {
-            x if x < 1.0 => 400.,
-            x if x < 3.0 => 200.,
+            x if x < 0.6 => 400.,
+            x if x < 1.5 => 200.,
             _ => 100.,
         };
         let percent = (90. - (angle / 2.)).to_radians().tan();
-        let points: Vec<PointVk> = (0..=(radius * 20.0) as i32)
+        let points: Vec<PointVk> = (0..=(radius * scale) as i32)
             .flat_map(|x| {
-                (0..=(radius * 20.0) as i32).filter_map(move |y| {
+                (0..=(radius * scale) as i32).filter_map(move |y| {
                     let x = (x as f32 * 10.) / scale;
                     let y = (y as f32 * 10.) / scale;
                     if circle.in_2d_bounds(&PointVk::new(x, y, 0.)) {
@@ -201,13 +201,13 @@ impl Tool {
     pub fn new_ball(radius: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
         let scale = match radius {
-            x if x < 1.0 => 400.,
-            x if x < 3.0 => 200.,
+            x if x < 0.6 => 400.,
+            x if x < 1.5 => 200.,
             _ => 100.,
         };
-        let points: Vec<PointVk> = (0..=(radius * 20.0) as i32)
+        let points: Vec<PointVk> = (0..=(radius * scale) as i32)
             .flat_map(|x| {
-                (0..=(radius * 20.0) as i32).filter_map(move |y| {
+                (0..=(radius * scale) as i32).filter_map(move |y| {
                     let x = (x as f32 * 10.0) / scale;
                     let y = (y as f32 * 10.0) / scale;
                     if circle.in_2d_bounds(&PointVk::new(x, y, 0.)) {
