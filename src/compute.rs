@@ -108,40 +108,47 @@ pub fn compute_drop(
 
     source_future.then_signal_fence_and_flush()?.wait(None)?;
 
-    let dest = CpuAccessibleBuffer::from_iter(
-        vk.device.clone(),
-        usage,
-        false,
-        dest_content.iter().copied(),
-    )?;
-
     let (tool_buffer, tool_future) =
         ImmutableBuffer::from_iter(tool.points.iter().copied(), usage, vk.queue.clone())?;
     tool_future.then_signal_fence_and_flush()?.wait(None)?;
-    let set = Arc::new(
-        PersistentDescriptorSet::start(layout.clone())
-            .add_buffer(source)?
-            .add_buffer(dest.clone())?
-            .add_buffer(tool_buffer)?
-            .build()?,
-    );
 
-    let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
-    builder.dispatch(
-        [
-            (tris.len() as u32 / 32) + 1,
-            (dest_content.len() as u32 / 32) + 1,
-            (tool.points.len() as u32 / 32) + 1,
-        ],
-        compute_pipeline.clone(),
-        set,
-        (),
-    )?;
-    let command_buffer = builder.build()?;
-    let finished = command_buffer.execute(vk.queue.clone())?;
-    finished.then_signal_fence_and_flush()?.wait(None)?;
-    let dest_content = dest.read()?;
-    Ok(dest_content.to_vec())
+    let (bbox_buffer, bbox_future) =
+        ImmutableBuffer::from_data(tool.bbox, usage, vk.queue.clone())?;
+    bbox_future.then_signal_fence_and_flush()?.wait(None)?;
+    let results: Vec<PointVk> = dest_content.into_iter().map(|point| {
+        let dest = CpuAccessibleBuffer::from_data(
+            vk.device.clone(),
+            usage,
+            false,
+            point.clone(),
+        ).unwrap();
+
+        let set = Arc::new(
+            PersistentDescriptorSet::start(layout.clone())
+                .add_buffer(source.clone()).unwrap()
+                .add_buffer(dest.clone()).unwrap()
+                .add_buffer(tool_buffer.clone()).unwrap()
+                .add_buffer(bbox_buffer.clone()).unwrap()
+                .build().unwrap(),
+        );
+        let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family()).unwrap();
+        builder.dispatch(
+            [
+                (tris.len() as u32 / 32) + 1,
+                (tool.points.len() as u32 / 32 ) +1,
+                1,
+            ],
+            compute_pipeline.clone(),
+            set,
+            (),
+        ).unwrap();
+        let command_buffer = builder.build().unwrap();
+        let finished = command_buffer.execute(vk.queue.clone()).unwrap();
+        finished.then_signal_fence_and_flush().unwrap().wait(None).unwrap();
+        let dest_content = dest.read().unwrap();
+        dest_content.to_owned()
+    }).collect();
+    Ok(results)
 }
 
 mod drop {
