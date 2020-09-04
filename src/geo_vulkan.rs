@@ -93,16 +93,12 @@ impl CircleVk {
     pub fn new(center: PointVk, radius: f32) -> CircleVk { CircleVk { center, radius } }
 
     pub fn in_2d_bounds(&self, point: &PointVk) -> bool {
-        let dx = f32::abs(point.position[0] - self.center.position[0]);
-        let dy = f32::abs(point.position[1] - self.center.position[1]);
-        if dx > self.radius {
-            false
-        } else if dy > self.radius {
-            false
-        } else if dx + dy <= self.radius {
+        let d = self.radius.powi(2) - ((self.center.position[0] - point.position[0]).powi(2)
+            + (self.center.position[1] - point.position[1]).powi(2));
+        if d >= 0. {
             true
         } else {
-            dx.powi(2) + dy.powi(2) <= self.radius.powi(2)
+            false
         }
     }
 
@@ -143,10 +139,16 @@ pub struct Tool {
 impl Tool {
     pub fn new_endmill(radius: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
-        let points: Vec<PointVk> = (0..=(radius * 20.0) as i32)
+        let scale = match radius {
+            x if x < 1.0 => 400.,
+            x if x < 3.0 => 200.,
+            _ => 100.,
+        };
+        let points: Vec<PointVk> = (0..=(radius * scale) as i32)
             .flat_map(|x| {
-                (0..=(radius * 20.0) as i32)
-                    .map(move |y| PointVk::new(x as f32 / 10.0, y as f32 / 10.0, 0.0))
+                (0..=(radius * scale) as i32).map(move |y| {
+                    PointVk::new((x as f32 * 10.) / scale, (y as f32 * 10.) / scale, 0.0)
+                })
             })
             .filter(|x| circle.in_2d_bounds(&x))
             .map(|x| {
@@ -165,12 +167,17 @@ impl Tool {
 
     pub fn new_v_bit(radius: f32, angle: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
+        let scale = match radius {
+            x if x < 1.0 => 400.,
+            x if x < 3.0 => 200.,
+            _ => 100.,
+        };
         let percent = (90. - (angle / 2.)).to_radians().tan();
         let points: Vec<PointVk> = (0..=(radius * 20.0) as i32)
             .flat_map(|x| {
                 (0..=(radius * 20.0) as i32).filter_map(move |y| {
-                    let x = x as f32 / 10.0;
-                    let y = y as f32 / 10.0;
+                    let x = (x as f32 * 10.) / scale;
+                    let y = (y as f32 * 10.) / scale;
                     if circle.in_2d_bounds(&PointVk::new(x, y, 0.)) {
                         let x = x - radius;
                         let y = y - radius;
@@ -193,11 +200,16 @@ impl Tool {
     // geometry better
     pub fn new_ball(radius: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
+        let scale = match radius {
+            x if x < 1.0 => 400.,
+            x if x < 3.0 => 200.,
+            _ => 100.,
+        };
         let points: Vec<PointVk> = (0..=(radius * 20.0) as i32)
             .flat_map(|x| {
                 (0..=(radius * 20.0) as i32).filter_map(move |y| {
-                    let x = x as f32 / 10.0;
-                    let y = y as f32 / 10.0;
+                    let x = (x as f32 * 10.0) / scale;
+                    let y = (y as f32 * 10.0) / scale;
                     if circle.in_2d_bounds(&PointVk::new(x, y, 0.)) {
                         let x = x - radius;
                         let y = y - radius;

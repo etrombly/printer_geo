@@ -7,11 +7,6 @@ struct Point {
     vec3 point;
 };
 
-struct BBox {
-    vec3 p1;
-    vec3 p2;
-};
-
 struct Triangle {
     vec3 p1;
     vec3 p2;
@@ -22,17 +17,13 @@ layout(set = 0, binding = 0) readonly buffer Triangles {
     Triangle tri[];
 } tris;
 
-layout(set = 0, binding = 1) buffer Points {
+layout(set = 0, binding = 1) coherent buffer Points {
     Point point;
 } points;
 
 layout(set = 0, binding = 2) readonly buffer Tool {
     Point point[];
 } tool;
-
-layout(set = 0, binding = 3) readonly buffer Box {
-    BBox bbox;
-} box;
 
 bool ray_tri_intersect(in vec3 O, in Triangle tri, out float hit) {
     // hard code the direction as casting up
@@ -57,29 +48,16 @@ bool ray_tri_intersect(in vec3 O, in Triangle tri, out float hit) {
     return false;
 }
 
-bool in_bounds(in vec3 min_in, in vec3 max_in, in Triangle tri) {
-    float max_x = max(max(tri.p1.x, tri.p2.x), tri.p3.x);
-    float max_y = max(max(tri.p1.y, tri.p2.y), tri.p3.y);
-    float min_x = min(min(tri.p1.x, tri.p2.x), tri.p3.x);
-    float min_y = min(min(tri.p1.y, tri.p2.y), tri.p3.y);
-    if (min_x >= min_in[0] && max_x <= max_in[0] && min_y >= min_in[1] && max_y <= max_in[1]) {
-        return true;
-    }
-    return false;
-}
-
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     uint idy = gl_GlobalInvocationID.y;
     if (idx <= tris.tri.length() && idy <= tool.point.length()){
-        if (in_bounds(box.bbox.p1 + points.point.point, box.bbox.p2 + points.point.point, tris.tri[idx])) {
-            float hit = 0;
-            // check if the current point in the tool intersects
-            bool intersection = ray_tri_intersect(points.point.point + tool.point[idy].point, tris.tri[idx], hit);
-            // if Z is higher write it as the current Z
-            if (intersection && hit > points.point.point[2]) {
-                points.point.point[2] = hit;
-            }
+        float hit = 0;
+        // check if the current point in the tool intersects
+        bool intersection = ray_tri_intersect(points.point.point + tool.point[idy].point, tris.tri[idx], hit);
+        // if Z is higher write it as the current Z
+        if (intersection && hit > points.point.point[2]) {
+            points.point.point[2] = hit;
         }
     }
 }
