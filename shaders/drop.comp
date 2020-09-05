@@ -18,12 +18,8 @@ layout(set = 0, binding = 0) readonly buffer Triangles {
 } tris;
 
 layout(set = 0, binding = 1) buffer Points {
-    Point point;
-} points;
-
-layout(set = 0, binding = 2) readonly buffer Tool {
     Point point[];
-} tool;
+} points;
 
 bool ray_tri_intersect(in vec3 O, in Triangle tri, out float hit) {
     // hard code the direction as casting up
@@ -51,13 +47,13 @@ bool ray_tri_intersect(in vec3 O, in Triangle tri, out float hit) {
 void main() {
     uint idx = gl_GlobalInvocationID.x;
     uint idy = gl_GlobalInvocationID.y;
-    if (idx <= tris.tri.length() && idy <= tool.point.length()){
+    if (idx <= tris.tri.length() && idy <= points.point.length()){
         float hit = 0;
         // check if the current point in the tool intersects
-        bool intersection = ray_tri_intersect(points.point.point + tool.point[idy].point, tris.tri[idx], hit);
+        bool intersection = ray_tri_intersect(points.point[idy].point, tris.tri[idx], hit);
         // if Z is higher write it as the current Z
-        if (intersection && hit > points.point.point[2]) {
-            points.point.point[2] = hit;
+        if (intersection && hit > points.point[idy].point[2]) {
+            points.point[idy].point[2] = hit;
         }
     }
 }
