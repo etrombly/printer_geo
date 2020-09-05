@@ -17,7 +17,7 @@ layout(set = 0, binding = 0) readonly buffer Triangles {
     Triangle tri[];
 } tris;
 
-layout(set = 0, binding = 1) coherent buffer Points {
+layout(set = 0, binding = 1) buffer Points {
     Point point;
 } points;
 

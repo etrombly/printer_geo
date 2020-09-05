@@ -10,6 +10,7 @@ use vulkano::{
     pipeline::ComputePipeline,
     sync::GpuFuture,
 };
+use rayon::prelude::*;
 
 #[derive(Error, Debug)]
 pub enum VkError {
@@ -103,10 +104,6 @@ pub fn compute_drop(
 
     let mut usage = BufferUsage::transfer_source();
     usage.storage_buffer = true;
-    let (source, source_future) =
-        ImmutableBuffer::from_iter(tris.iter().copied(), usage, vk.queue.clone())?;
-
-    source_future.then_signal_fence_and_flush()?.wait(None)?;
 
     let (tool_buffer, tool_future) =
         ImmutableBuffer::from_iter(tool.points.iter().copied(), usage, vk.queue.clone())?;
@@ -115,6 +112,15 @@ pub fn compute_drop(
     let results: Vec<PointVk> = dest_content
         .into_iter()
         .map(|point| {
+            let bounds = LineVk {
+                p1: tool.bbox.p1 + *point,
+                p2: tool.bbox.p2 + *point,
+            };
+            let filtered: Vec<_> = tris.par_iter().copied().filter(|x| x.in_2d_bounds(&bounds)).collect();
+            let (source, source_future) =
+        ImmutableBuffer::from_iter(filtered.iter().copied(), usage, vk.queue.clone()).unwrap();
+
+    source_future.then_signal_fence_and_flush().unwrap().wait(None).unwrap();
             let dest =
                 CpuAccessibleBuffer::from_data(vk.device.clone(), usage, false, point.clone())
                     .unwrap();
