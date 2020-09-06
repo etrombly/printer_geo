@@ -1,9 +1,10 @@
 use crate::geo::*;
 use std::{default::Default, fmt, ops::Add};
+use serde::{Serialize, Deserialize};
 
 // Compute buffers are 16 byte aligned
 #[repr(C, align(16))]
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Serialize, Deserialize, Copy, Clone)]
 pub struct PointVk {
     pub position: [f32; 3],
 }
@@ -59,6 +60,15 @@ impl TriangleVk {
     pub fn in_2d_bounds(&self, bbox: &LineVk) -> bool {
         bbox.in_2d_bounds(&self.p1) || bbox.in_2d_bounds(&self.p2) || bbox.in_2d_bounds(&self.p3)
     }
+
+    pub fn filter_row(&self, bound: LineVk) -> bool {
+        (self.p1.position[0] >= bound.p1.position[0] && self.p1.position[0] <= bound.p2.position[0]) || 
+        (self.p2.position[0] >= bound.p1.position[0] && self.p2.position[0] <= bound.p2.position[0]) || 
+        (self.p3.position[0] >= bound.p1.position[0] && self.p3.position[0] <= bound.p2.position[0]) ||
+        (LineVk{p1: self.p1, p2: self.p2}).intersect2d(bound) ||
+        (LineVk{p1: self.p2, p2: self.p3}).intersect2d(bound) ||
+        (LineVk{p1: self.p1, p2: self.p3}).intersect2d(bound) 
+    }
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -81,6 +91,22 @@ impl LineVk {
             && point.position[1] >= self.p1.position[1]
             && point.position[1] <= self.p2.position[1]
     }
+
+    pub fn intersect2d(self, other: Self) -> bool {
+        let a1 = self.p2.position[1] - self.p1.position[1];
+        let b1 = self.p1.position[0] - self.p2.position[0];
+        let c1 = a1 * self.p1.position[0] + b1 * self.p1.position[1];
+ 
+        let a2 = other.p2.position[1] - other.p1.position[1];
+        let b2 = other.p1.position[0] - other.p2.position[0];
+        let c2 = a2 * other.p1.position[0] + b2 * other.p1.position[1];
+ 
+        let delta = a1 * b2 - a2 * b1;
+        let x = (b2 * c1 - b1 * c2) / delta;
+        let y = (a1 * c2 - a2 * c1) / delta;
+        delta != 0.0 && self.p1.position[0].min(self.p2.position[0]) <= x && x <= self.p1.position[0].max(self.p2.position[0]) && 
+        self.p1.position[1].min(self.p2.position[1]) <= y && y <= self.p1.position[1].max(self.p2.position[1])
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -93,13 +119,9 @@ impl CircleVk {
     pub fn new(center: PointVk, radius: f32) -> CircleVk { CircleVk { center, radius } }
 
     pub fn in_2d_bounds(&self, point: &PointVk) -> bool {
-        let d = self.radius.powi(2) - ((self.center.position[0] - point.position[0]).powi(2)
-            + (self.center.position[1] - point.position[1]).powi(2));
-        if d >= 0. {
-            true
-        } else {
-            false
-        }
+        (point.position[0] - self.center.position[0]).powi(2)
+            + (point.position[1] - self.center.position[1]).powi(2)
+            <= self.radius.powi(2)
     }
 
     pub fn bbox(self) -> LineVk {
@@ -139,15 +161,10 @@ pub struct Tool {
 impl Tool {
     pub fn new_endmill(radius: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
-        let scale = match radius {
-            x if x < 0.6 => 400.,
-            x if x < 1.5 => 200.,
-            _ => 100.,
-        };
-        let points: Vec<PointVk> = (0..=(radius * scale) as i32)
+        let points: Vec<PointVk> = (0..=(radius * 40.) as i32)
             .flat_map(|x| {
-                (0..=(radius * scale) as i32).map(move |y| {
-                    PointVk::new((x as f32 * 10.) / scale, (y as f32 * 10.) / scale, 0.0)
+                (0..=(radius * 40.) as i32).map(move |y| {
+                    PointVk::new(x as f32 / 20., y as f32 / 20., 0.0)
                 })
             })
             .filter(|x| circle.in_2d_bounds(&x))
@@ -167,17 +184,12 @@ impl Tool {
 
     pub fn new_v_bit(radius: f32, angle: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
-        let scale = match radius {
-            x if x < 0.6 => 400.,
-            x if x < 1.5 => 200.,
-            _ => 100.,
-        };
         let percent = (90. - (angle / 2.)).to_radians().tan();
-        let points: Vec<PointVk> = (0..=(radius * scale) as i32)
+        let points: Vec<PointVk> = (0..=(radius * 20.) as i32)
             .flat_map(|x| {
-                (0..=(radius * scale) as i32).filter_map(move |y| {
-                    let x = (x as f32 * 10.) / scale;
-                    let y = (y as f32 * 10.) / scale;
+                (0..=(radius * 20.) as i32).filter_map(move |y| {
+                    let x = x as f32 / 10.;
+                    let y = y as f32 / 10.;
                     if circle.in_2d_bounds(&PointVk::new(x, y, 0.)) {
                         let x = x - radius;
                         let y = y - radius;
@@ -200,16 +212,11 @@ impl Tool {
     // geometry better
     pub fn new_ball(radius: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
-        let scale = match radius {
-            x if x < 0.6 => 400.,
-            x if x < 1.5 => 200.,
-            _ => 100.,
-        };
-        let points: Vec<PointVk> = (0..=(radius * scale) as i32)
+        let points: Vec<PointVk> = (0..=(radius * 20.) as i32)
             .flat_map(|x| {
-                (0..=(radius * scale) as i32).filter_map(move |y| {
-                    let x = (x as f32 * 10.0) / scale;
-                    let y = (y as f32 * 10.0) / scale;
+                (0..=(radius * 20.) as i32).filter_map(move |y| {
+                    let x = x as f32 / 10.0;
+                    let y = y as f32 / 10.0;
                     if circle.in_2d_bounds(&PointVk::new(x, y, 0.)) {
                         let x = x - radius;
                         let y = y - radius;
