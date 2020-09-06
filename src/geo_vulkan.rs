@@ -1,9 +1,10 @@
 use crate::geo::*;
 use std::{default::Default, fmt, ops::Add};
+use serde::{Serialize, Deserialize};
 
 // Compute buffers are 16 byte aligned
 #[repr(C, align(16))]
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Serialize, Deserialize, Copy, Clone)]
 pub struct PointVk {
     pub position: [f32; 3],
 }
@@ -60,10 +61,13 @@ impl TriangleVk {
         bbox.in_2d_bounds(&self.p1) || bbox.in_2d_bounds(&self.p2) || bbox.in_2d_bounds(&self.p3)
     }
 
-    pub fn filter_row(&self, start: f32, end: f32) -> bool {
-        (self.p1.position[0] >= start && self.p1.position[0] <= end) || 
-        (self.p2.position[0] >= start && self.p2.position[0] <= end) || 
-        (self.p3.position[0] >= start && self.p3.position[0] <= end) 
+    pub fn filter_row(&self, bound: LineVk) -> bool {
+        (self.p1.position[0] >= bound.p1.position[0] && self.p1.position[0] <= bound.p2.position[0]) || 
+        (self.p2.position[0] >= bound.p1.position[0] && self.p2.position[0] <= bound.p2.position[0]) || 
+        (self.p3.position[0] >= bound.p1.position[0] && self.p3.position[0] <= bound.p2.position[0]) ||
+        (LineVk{p1: self.p1, p2: self.p2}).intersect2d(bound) ||
+        (LineVk{p1: self.p2, p2: self.p3}).intersect2d(bound) ||
+        (LineVk{p1: self.p1, p2: self.p3}).intersect2d(bound) 
     }
 }
 
@@ -86,6 +90,22 @@ impl LineVk {
             && point.position[0] <= self.p2.position[0]
             && point.position[1] >= self.p1.position[1]
             && point.position[1] <= self.p2.position[1]
+    }
+
+    pub fn intersect2d(self, other: Self) -> bool {
+        let a1 = self.p2.position[1] - self.p1.position[1];
+        let b1 = self.p1.position[0] - self.p2.position[0];
+        let c1 = a1 * self.p1.position[0] + b1 * self.p1.position[1];
+ 
+        let a2 = other.p2.position[1] - other.p1.position[1];
+        let b2 = other.p1.position[0] - other.p2.position[0];
+        let c2 = a2 * other.p1.position[0] + b2 * other.p1.position[1];
+ 
+        let delta = a1 * b2 - a2 * b1;
+        let x = (b2 * c1 - b1 * c2) / delta;
+        let y = (a1 * c2 - a2 * c1) / delta;
+        delta != 0.0 && self.p1.position[0].min(self.p2.position[0]) <= x && x <= self.p1.position[0].max(self.p2.position[0]) && 
+        self.p1.position[1].min(self.p2.position[1]) <= y && y <= self.p1.position[1].max(self.p2.position[1])
     }
 }
 
@@ -141,10 +161,10 @@ pub struct Tool {
 impl Tool {
     pub fn new_endmill(radius: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
-        let points: Vec<PointVk> = (0..=(radius * 20.) as i32)
+        let points: Vec<PointVk> = (0..=(radius * 40.) as i32)
             .flat_map(|x| {
-                (0..=(radius * 20.) as i32).map(move |y| {
-                    PointVk::new(x as f32 / 10., y as f32 / 10., 0.0)
+                (0..=(radius * 40.) as i32).map(move |y| {
+                    PointVk::new(x as f32 / 20., y as f32 / 20., 0.0)
                 })
             })
             .filter(|x| circle.in_2d_bounds(&x))
