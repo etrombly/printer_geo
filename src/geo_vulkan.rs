@@ -229,19 +229,19 @@ pub struct Tool {
 }
 
 impl Tool {
-    pub fn new_endmill(radius: f32) -> Tool {
+    pub fn new_endmill(radius: f32, scale: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(0., 0., 0.), radius);
-        let points = Tool::circle_to_points(&circle);
+        let points = Tool::circle_to_points(&circle, scale);
         Tool {
             bbox: circle.bbox(),
             points,
         }
     }
 
-    pub fn new_v_bit(radius: f32, angle: f32) -> Tool {
+    pub fn new_v_bit(radius: f32, angle: f32, scale: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(0., 0., 0.), radius);
         let percent = (90. - (angle / 2.)).to_radians().tan();
-        let points = Tool::circle_to_points(&circle);
+        let points = Tool::circle_to_points(&circle, scale);
         let points = points
             .iter()
             .map(|point| {
@@ -258,9 +258,9 @@ impl Tool {
 
     // TODO: this approximates a ball end mill, probably want to generate the
     // geometry better
-    pub fn new_ball(radius: f32) -> Tool {
+    pub fn new_ball(radius: f32, scale: f32) -> Tool {
         let circle = CircleVk::new(PointVk::new(0., 0., 0.), radius);
-        let points = Tool::circle_to_points(&circle);
+        let points = Tool::circle_to_points(&circle, scale);
         let points = points
             .iter()
             .map(|point| {
@@ -280,15 +280,15 @@ impl Tool {
         }
     }
 
-    pub fn circle_to_points(circle: &CircleVk) -> Vec<PointVk> {
-        let mut points: Vec<PointVk> = (0..=(circle.radius * 20.) as i32)
+    pub fn circle_to_points(circle: &CircleVk, scale: f32) -> Vec<PointVk> {
+        let mut points: Vec<PointVk> = (0..=(circle.radius * scale) as i32)
             .flat_map(|x| {
-                (0..=(circle.radius * 20.) as i32).flat_map(move |y| {
+                (0..=(circle.radius * scale) as i32).flat_map(move |y| {
                     vec![
-                        PointVk::new(-x as f32 / 20., y as f32 / 20., 0.0),
-                        PointVk::new(-x as f32 / 20., -y as f32 / 20., 0.0),
-                        PointVk::new(x as f32 / 20., -y as f32 / 20., 0.0),
-                        PointVk::new(x as f32 / 20., y as f32 / 20., 0.0),
+                        PointVk::new(-x as f32 / scale, y as f32 / scale, 0.0),
+                        PointVk::new(-x as f32 / scale, -y as f32 / scale, 0.0),
+                        PointVk::new(x as f32 / scale, -y as f32 / scale, 0.0),
+                        PointVk::new(x as f32 / scale, y as f32 / scale, 0.0),
                     ]
                 })
             })
