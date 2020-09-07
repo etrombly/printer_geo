@@ -139,9 +139,84 @@ pub fn compute_drop(
     Ok(dest_content.to_vec())
 }
 
+pub fn partition_tris(
+    tris: &[TriangleVk],
+    columns: &[LineVk],
+    vk: &Vk,
+) -> Result<Vec<Vec<TriangleVk>>, ComputeError> {
+    let shader = partition::Shader::load(vk.device.clone())?;
+    let compute_pipeline = Arc::new(ComputePipeline::new(
+        vk.device.clone(),
+        &shader.main_entry_point(),
+        &(),
+    )?);
+
+    let layout = compute_pipeline
+        .layout()
+        .descriptor_set_layout(0)
+        .ok_or_else(|| ComputeError::Layout)?;
+
+    let mut usage = BufferUsage::transfer_source();
+    usage.storage_buffer = true;
+
+    let (source, source_future) =
+        ImmutableBuffer::from_iter(tris.iter().copied(), usage, vk.queue.clone())?;
+
+    source_future.then_signal_fence_and_flush()?.wait(None)?;
+
+    let (columns_buffer, columns_future) =
+        ImmutableBuffer::from_iter(columns.iter().copied(), usage, vk.queue.clone())?;
+
+    columns_future.then_signal_fence_and_flush()?.wait(None)?;
+
+    let dest_content = (0..tris.len()).map(|_| 0u32);
+    let dest = CpuAccessibleBuffer::from_iter(
+        vk.device.clone(),
+        usage,
+        false,
+        dest_content,
+    )?;
+
+    let set = Arc::new(
+        PersistentDescriptorSet::start(layout.clone())
+            .add_buffer(source.clone())?
+            .add_buffer(columns_buffer.clone())?
+            .add_buffer(dest.clone())?
+            .build()?,
+    );
+    let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
+    builder.dispatch(
+        [
+            (tris.len() as u32 / 32) + 1,
+            (columns.len() as u32 / 32) + 1,
+            1,
+        ],
+        compute_pipeline.clone(),
+        set,
+        (),
+    )?;
+    let command_buffer = builder.build()?;
+    let finished = command_buffer.execute(vk.queue.clone())?;
+    finished.then_signal_fence_and_flush()?.wait(None)?;
+    let dest_content = dest.read()?;
+    println!("{:?}", dest_content.to_vec());
+    //TODO: parse columns from u8 in dest_content
+    let result = Vec::new();
+
+    Ok(result)
+}
+
+
 mod drop {
     vulkano_shaders::shader! {
         ty: "compute",
         path: "shaders/drop.comp"
+    }
+}
+
+mod partition {
+    vulkano_shaders::shader! {
+        ty: "compute",
+        path: "shaders/partition.comp"
     }
 }

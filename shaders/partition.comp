@@ -1,0 +1,70 @@
+#version 450
+#define EPSILON 0.001
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+struct Point {
+    vec3 point;
+};
+
+struct Triangle {
+    vec3 p1;
+    vec3 p2;
+    vec3 p3;
+};
+
+struct Line {
+    vec3 p1;
+    vec3 p2;
+};
+
+layout(set = 0, binding = 0) readonly buffer Triangles {
+    Triangle tri[];
+} tris;
+
+layout(set = 0, binding = 1) readonly buffer Lines {
+    Line line[];
+} columns;
+
+layout(set = 0, binding = 2) buffer Results {
+    uint columns[];
+} results;
+
+bool line_intersect(in Line right, in Line left) {
+    float a1 = right.p2[1] - right.p1[1];
+    float b1 = right.p1[0] - right.p2[0];
+    float c1 = a1 * right.p1[0] + b1 * right.p1[1];
+
+    float a2 = left.p2[1] - left.p1[1];
+    float b2 = left.p1[0] - left.p2[0];
+    float c2 = a2 * left.p1[0] + b2 * left.p1[1];
+
+    float delta = a1 * b2 - a2 * b1;
+    float x = (b2 * c1 - b1 * c2) / delta;
+    float y = (a1 * c2 - a2 * c1) / delta;
+    return delta != 0.0 && min(right.p1[0], right.p2[0]) <= x &&
+     x <= max(right.p1[0], right.p2[0]) && 
+     min(right.p1[1],right.p2[1]) <= y && 
+     y <= max(right.p1[1],right.p2[1]);
+}
+
+bool in_column (in Triangle tri, in Line bounds) {
+    Line line1 = Line(tri.p1, tri.p2);
+    Line line2 = Line(tri.p2, tri.p3);
+    Line line3 = Line(tri.p1, tri.p3);
+    return (tri.p1[0] >= bounds.p1[0] && tri.p1[0] <= bounds.p2[0]) || 
+    (tri.p2[0] >= bounds.p1[0] && tri.p2[0] <= bounds.p2[0]) || 
+    (tri.p3[0] >= bounds.p1[0] && tri.p3[0] <= bounds.p2[0]) ||
+    line_intersect(line1, bounds) || line_intersect(line2, bounds) ||
+    line_intersect(line3, bounds);
+}
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    uint idy = gl_GlobalInvocationID.y;
+    if (idx <= tris.tri.length() && idy <= columns.line.length()){
+        if (in_column(tris.tri[idx], columns.line[idy])) {
+            results.columns[idx] = results.columns[idx] & (1 << idy);
+        }
+    }
+}
