@@ -1,5 +1,4 @@
 pub use crate::geo_vulkan::*;
-use rayon::prelude::*;
 use std::sync::Arc;
 use thiserror::Error;
 use vulkano::{
