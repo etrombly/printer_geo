@@ -1,6 +1,12 @@
 use crate::geo::*;
-use std::{default::Default, fmt, ops::Add};
-use serde::{Serialize, Deserialize};
+use float_cmp::approx_eq;
+use serde::{Deserialize, Serialize};
+use std::{
+    cmp::{Ordering, PartialEq},
+    default::Default,
+    fmt,
+    ops::Add,
+};
 
 // Compute buffers are 16 byte aligned
 #[repr(C, align(16))]
@@ -15,6 +21,44 @@ impl PointVk {
             position: [x, y, z],
         }
     }
+}
+
+impl Eq for PointVk {}
+
+impl PartialEq for PointVk {
+    fn eq(&self, other: &Self) -> bool {
+        approx_eq!(f32, self.position[0], other.position[0], ulps = 2)
+            && approx_eq!(f32, self.position[1], other.position[1], ulps = 2)
+            && approx_eq!(f32, self.position[2], other.position[2], ulps = 2)
+    }
+}
+
+impl Ord for PointVk {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.position[0] > other.position[0] {
+            Ordering::Greater
+        } else if approx_eq!(f32, self.position[0], other.position[0], ulps = 2) {
+            if self.position[1] > other.position[1] {
+                Ordering::Greater
+            } else if approx_eq!(f32, self.position[1], other.position[1], ulps = 2) {
+                if self.position[2] > other.position[2] {
+                    Ordering::Greater
+                } else if approx_eq!(f32, self.position[2], other.position[2], ulps = 2) {
+                    Ordering::Equal
+                } else {
+                    Ordering::Less
+                }
+            } else {
+                Ordering::Less
+            }
+        } else {
+            Ordering::Less
+        }
+    }
+}
+
+impl PartialOrd for PointVk {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
 impl fmt::Debug for PointVk {
@@ -62,12 +106,26 @@ impl TriangleVk {
     }
 
     pub fn filter_row(&self, bound: LineVk) -> bool {
-        (self.p1.position[0] >= bound.p1.position[0] && self.p1.position[0] <= bound.p2.position[0]) || 
-        (self.p2.position[0] >= bound.p1.position[0] && self.p2.position[0] <= bound.p2.position[0]) || 
-        (self.p3.position[0] >= bound.p1.position[0] && self.p3.position[0] <= bound.p2.position[0]) ||
-        (LineVk{p1: self.p1, p2: self.p2}).intersect2d(bound) ||
-        (LineVk{p1: self.p2, p2: self.p3}).intersect2d(bound) ||
-        (LineVk{p1: self.p1, p2: self.p3}).intersect2d(bound) 
+        (self.p1.position[0] >= bound.p1.position[0] && self.p1.position[0] <= bound.p2.position[0])
+            || (self.p2.position[0] >= bound.p1.position[0]
+                && self.p2.position[0] <= bound.p2.position[0])
+            || (self.p3.position[0] >= bound.p1.position[0]
+                && self.p3.position[0] <= bound.p2.position[0])
+            || (LineVk {
+                p1: self.p1,
+                p2: self.p2,
+            })
+            .intersect2d(bound)
+            || (LineVk {
+                p1: self.p2,
+                p2: self.p3,
+            })
+            .intersect2d(bound)
+            || (LineVk {
+                p1: self.p1,
+                p2: self.p3,
+            })
+            .intersect2d(bound)
     }
 }
 
@@ -96,16 +154,19 @@ impl LineVk {
         let a1 = self.p2.position[1] - self.p1.position[1];
         let b1 = self.p1.position[0] - self.p2.position[0];
         let c1 = a1 * self.p1.position[0] + b1 * self.p1.position[1];
- 
+
         let a2 = other.p2.position[1] - other.p1.position[1];
         let b2 = other.p1.position[0] - other.p2.position[0];
         let c2 = a2 * other.p1.position[0] + b2 * other.p1.position[1];
- 
+
         let delta = a1 * b2 - a2 * b1;
         let x = (b2 * c1 - b1 * c2) / delta;
         let y = (a1 * c2 - a2 * c1) / delta;
-        delta != 0.0 && self.p1.position[0].min(self.p2.position[0]) <= x && x <= self.p1.position[0].max(self.p2.position[0]) && 
-        self.p1.position[1].min(self.p2.position[1]) <= y && y <= self.p1.position[1].max(self.p2.position[1])
+        delta != 0.0
+            && self.p1.position[0].min(self.p2.position[0]) <= x
+            && x <= self.p1.position[0].max(self.p2.position[0])
+            && self.p1.position[1].min(self.p2.position[1]) <= y
+            && y <= self.p1.position[1].max(self.p2.position[1])
     }
 }
 
@@ -160,22 +221,8 @@ pub struct Tool {
 
 impl Tool {
     pub fn new_endmill(radius: f32) -> Tool {
-        let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
-        let points: Vec<PointVk> = (0..=(radius * 40.) as i32)
-            .flat_map(|x| {
-                (0..=(radius * 40.) as i32).map(move |y| {
-                    PointVk::new(x as f32 / 20., y as f32 / 20., 0.0)
-                })
-            })
-            .filter(|x| circle.in_2d_bounds(&x))
-            .map(|x| {
-                PointVk::new(
-                    x.position[0] - radius,
-                    x.position[1] - radius,
-                    x.position[2],
-                )
-            })
-            .collect();
+        let circle = CircleVk::new(PointVk::new(0., 0., 0.), radius);
+        let points = Tool::circle_to_points(&circle);
         Tool {
             bbox: circle.bbox(),
             points,
@@ -183,23 +230,15 @@ impl Tool {
     }
 
     pub fn new_v_bit(radius: f32, angle: f32) -> Tool {
-        let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
+        let circle = CircleVk::new(PointVk::new(0., 0., 0.), radius);
         let percent = (90. - (angle / 2.)).to_radians().tan();
-        let points: Vec<PointVk> = (0..=(radius * 20.) as i32)
-            .flat_map(|x| {
-                (0..=(radius * 20.) as i32).filter_map(move |y| {
-                    let x = x as f32 / 10.;
-                    let y = y as f32 / 10.;
-                    if circle.in_2d_bounds(&PointVk::new(x, y, 0.)) {
-                        let x = x - radius;
-                        let y = y - radius;
-                        let distance = (x.powi(2) + y.powi(2)).sqrt();
-                        let z = distance * percent;
-                        Some(PointVk::new(x, y, z))
-                    } else {
-                        None
-                    }
-                })
+        let points = Tool::circle_to_points(&circle);
+        let points = points
+            .iter()
+            .map(|point| {
+                let distance = (point.position[0].powi(2) + point.position[1].powi(2)).sqrt();
+                let z = distance * percent;
+                PointVk::new(point.position[0], point.position[1], z)
             })
             .collect();
         Tool {
@@ -211,33 +250,44 @@ impl Tool {
     // TODO: this approximates a ball end mill, probably want to generate the
     // geometry better
     pub fn new_ball(radius: f32) -> Tool {
-        let circle = CircleVk::new(PointVk::new(radius, radius, 0.0), radius);
-        let points: Vec<PointVk> = (0..=(radius * 20.) as i32)
-            .flat_map(|x| {
-                (0..=(radius * 20.) as i32).filter_map(move |y| {
-                    let x = x as f32 / 10.0;
-                    let y = y as f32 / 10.0;
-                    if circle.in_2d_bounds(&PointVk::new(x, y, 0.)) {
-                        let x = x - radius;
-                        let y = y - radius;
-                        let distance = (x.powi(2) + y.powi(2)).sqrt();
-                        let z = if distance > 0. {
-                            // 55. is the angle
-                            radius + (-radius * (55. / (radius / distance)).to_radians().cos())
-                        } else {
-                            0.
-                        };
-                        Some(PointVk::new(x, y, z))
-                    } else {
-                        None
-                    }
-                })
+        let circle = CircleVk::new(PointVk::new(0., 0., 0.), radius);
+        let points = Tool::circle_to_points(&circle);
+        let points = points
+            .iter()
+            .map(|point| {
+                let distance = (point.position[0].powi(2) + point.position[1].powi(2)).sqrt();
+                let z = if distance > 0. {
+                    // 65. is the angle
+                    radius + (-radius * (65. / (radius / distance)).to_radians().cos())
+                } else {
+                    0.
+                };
+                PointVk::new(point.position[0], point.position[1], z)
             })
             .collect();
         Tool {
             bbox: circle.bbox(),
             points,
         }
+    }
+
+    pub fn circle_to_points(circle: &CircleVk) -> Vec<PointVk> {
+        let mut points: Vec<PointVk> = (0..=(circle.radius * 20.) as i32)
+            .flat_map(|x| {
+                (0..=(circle.radius * 20.) as i32).flat_map(move |y| {
+                    vec![
+                        PointVk::new(-x as f32 / 20., y as f32 / 20., 0.0),
+                        PointVk::new(-x as f32 / 20., -y as f32 / 20., 0.0),
+                        PointVk::new(x as f32 / 20., -y as f32 / 20., 0.0),
+                        PointVk::new(x as f32 / 20., y as f32 / 20., 0.0),
+                    ]
+                })
+            })
+            .filter(|x| circle.in_2d_bounds(&x))
+            .collect();
+        points.sort();
+        points.dedup();
+        points
     }
 }
 
