@@ -108,6 +108,18 @@ impl TriangleVk {
     }
 
     pub fn filter_row(&self, bound: LineVk) -> bool {
+        let bound1 = LineVk {
+            p1: bound.p1,
+            p2: PointVk {
+                position: [bound.p1[0], bound.p2[1], 0.],
+            },
+        };
+        let bound2 = LineVk {
+            p1: PointVk {
+                position: [bound.p2[0], bound.p1[1], 0.],
+            },
+            p2: bound.p2,
+        };
         (self.p1[0] >= bound.p1[0] && self.p1[0] <= bound.p2[0])
             || (self.p2[0] >= bound.p1[0] && self.p2[0] <= bound.p2[0])
             || (self.p3[0] >= bound.p1[0] && self.p3[0] <= bound.p2[0])
@@ -115,17 +127,32 @@ impl TriangleVk {
                 p1: self.p1,
                 p2: self.p2,
             })
-            .intersect2d(bound)
+            .intersect2d(bound1)
             || (LineVk {
                 p1: self.p2,
                 p2: self.p3,
             })
-            .intersect2d(bound)
+            .intersect2d(bound1)
             || (LineVk {
                 p1: self.p1,
                 p2: self.p3,
             })
-            .intersect2d(bound)
+            .intersect2d(bound1)
+            || (LineVk {
+                p1: self.p1,
+                p2: self.p2,
+            })
+            .intersect2d(bound2)
+            || (LineVk {
+                p1: self.p2,
+                p2: self.p3,
+            })
+            .intersect2d(bound2)
+            || (LineVk {
+                p1: self.p1,
+                p2: self.p3,
+            })
+            .intersect2d(bound2)
     }
 }
 
