@@ -5,9 +5,8 @@ use std::{
     cmp::{Ordering, PartialEq},
     default::Default,
     fmt,
-    ops::Add,
+    ops::{Add, Index},
 };
-use std::ops::Index;
 
 // Compute buffers are 16 byte aligned
 #[repr(C, align(16))]
@@ -65,9 +64,7 @@ impl PartialOrd for PointVk {
 impl Index<usize> for PointVk {
     type Output = f32;
 
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.position[index]
-    }
+    fn index(&self, index: usize) -> &Self::Output { &self.position[index] }
 }
 
 impl fmt::Debug for PointVk {
@@ -85,11 +82,7 @@ impl Add<PointVk> for PointVk {
 
     fn add(self, other: PointVk) -> PointVk {
         PointVk {
-            position: [
-                self[0] + other[0],
-                self[1] + other[1],
-                self[2] + other[2],
-            ],
+            position: [self[0] + other[0], self[1] + other[1], self[2] + other[2]],
         }
     }
 }
@@ -115,26 +108,41 @@ impl TriangleVk {
     }
 
     pub fn filter_row(&self, bound: LineVk) -> bool {
+        let bound1 = LineVk{p1: bound.p1, p2: PointVk{position: [bound.p1[0],bound.p2[1], 0.]}};
+        let bound2 = LineVk{p1: PointVk{position: [bound.p2[0],bound.p1[1], 0.]}, p2: bound.p2};
         (self.p1[0] >= bound.p1[0] && self.p1[0] <= bound.p2[0])
-            || (self.p2[0] >= bound.p1[0]
-                && self.p2[0] <= bound.p2[0])
-            || (self.p3[0] >= bound.p1[0]
-                && self.p3[0] <= bound.p2[0])
+            || (self.p2[0] >= bound.p1[0] && self.p2[0] <= bound.p2[0])
+            || (self.p3[0] >= bound.p1[0] && self.p3[0] <= bound.p2[0])
             || (LineVk {
                 p1: self.p1,
                 p2: self.p2,
             })
-            .intersect2d(bound)
+            .intersect2d(bound1)
             || (LineVk {
                 p1: self.p2,
                 p2: self.p3,
             })
-            .intersect2d(bound)
+            .intersect2d(bound1)
             || (LineVk {
                 p1: self.p1,
                 p2: self.p3,
             })
-            .intersect2d(bound)
+            .intersect2d(bound1)
+            || (LineVk {
+                p1: self.p1,
+                p2: self.p2,
+            })
+            .intersect2d(bound2)
+            || (LineVk {
+                p1: self.p2,
+                p2: self.p3,
+            })
+            .intersect2d(bound2)
+            || (LineVk {
+                p1: self.p1,
+                p2: self.p3,
+            })
+            .intersect2d(bound2)
     }
 }
 
@@ -189,8 +197,7 @@ impl CircleVk {
     pub fn new(center: PointVk, radius: f32) -> CircleVk { CircleVk { center, radius } }
 
     pub fn in_2d_bounds(&self, point: &PointVk) -> bool {
-        (point[0] - self.center[0]).powi(2)
-            + (point[1] - self.center[1]).powi(2)
+        (point[0] - self.center[0]).powi(2) + (point[1] - self.center[1]).powi(2)
             <= self.radius.powi(2)
     }
 
@@ -312,15 +319,7 @@ pub fn to_tri_vk(tris: &[Triangle3d]) -> Vec<TriangleVk> {
 
 pub fn to_line3d(line: &LineVk) -> Line3d {
     Line3d {
-        p1: Point3d::new(
-            line.p1[0],
-            line.p1[1],
-            line.p1[2],
-        ),
-        p2: Point3d::new(
-            line.p2[0],
-            line.p2[1],
-            line.p2[2],
-        ),
+        p1: Point3d::new(line.p1[0], line.p1[1], line.p1[2]),
+        p2: Point3d::new(line.p2[0], line.p2[1], line.p2[2]),
     }
 }

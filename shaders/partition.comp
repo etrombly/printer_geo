@@ -51,11 +51,14 @@ bool in_column (in Triangle tri, in Line bounds) {
     Line line1 = Line(tri.p1, tri.p2);
     Line line2 = Line(tri.p2, tri.p3);
     Line line3 = Line(tri.p1, tri.p3);
+    Line bounds1 = Line(bounds.p1, vec3(bounds.p1[0],bounds.p2[1], 0.));
+    Line bounds2 = Line(vec3(bounds.p2[0],bounds.p1[1], 0.), bounds.p2);
     return (tri.p1[0] >= bounds.p1[0] && tri.p1[0] <= bounds.p2[0]) || 
     (tri.p2[0] >= bounds.p1[0] && tri.p2[0] <= bounds.p2[0]) || 
     (tri.p3[0] >= bounds.p1[0] && tri.p3[0] <= bounds.p2[0]) ||
-    line_intersect(line1, bounds) || line_intersect(line2, bounds) ||
-    line_intersect(line3, bounds);
+    line_intersect(line1, bounds1) || line_intersect(line2, bounds1) ||
+    line_intersect(line3, bounds1) || line_intersect(line1, bounds2) || line_intersect(line2, bounds2) ||
+    line_intersect(line3, bounds2);
 }
 
 void main() {
