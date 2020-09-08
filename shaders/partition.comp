@@ -1,6 +1,6 @@
 #version 450
 
-layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 struct Point {
     vec3 point;
@@ -21,9 +21,9 @@ layout(set = 0, binding = 0) readonly buffer Triangles {
     Triangle tri[];
 } tris;
 
-layout(set = 0, binding = 1) readonly buffer Column {
-    Line line;
-} column;
+layout(set = 0, binding = 1) readonly buffer Columns {
+    Line line[];
+} columns;
 
 layout(set = 0, binding = 2) buffer Results {
     bool columns[];
@@ -60,9 +60,10 @@ bool in_column (in Triangle tri, in Line bounds) {
 
 void main() {
     uint idx = gl_GlobalInvocationID.x;
-    if (idx <= tris.tri.length()){
-        if (in_column(tris.tri[idx], column.line)) {
-            results.columns[idx] = true;
+    uint idy = gl_GlobalInvocationID.y;
+    if (idx <= tris.tri.length() && idy <= columns.line.length()){
+        if (in_column(tris.tri[idx], columns.line[idy])) {
+            results.columns[idx + (idy * tris.tri.length())] = true;
         }
     }
 }

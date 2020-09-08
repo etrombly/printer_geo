@@ -164,15 +164,20 @@ pub fn partition_tris(
 
     source_future.then_signal_fence_and_flush()?.wait(None)?;
 
-    let columns_buffer =
-    CpuAccessibleBuffer::from_data(vk.device.clone(), usage, false,columns[0])?;
+    let (columns_buffer, columns_future) =
+        ImmutableBuffer::from_iter(columns.iter().copied(), usage, vk.queue.clone())?;
 
-    let dest_content = (0..tris.len()).map(|_| false);
+    columns_future.then_signal_fence_and_flush()?.wait(None)?;
+
+    //let dest_content = (0..tris.len() * columns.len()).map(|_| false);
+    let mut dest_content = Vec::with_capacity(tris.len() * columns.len());
+    unsafe{
+        dest_content.set_len(tris.len() * columns.len()) ;}
     let dest = CpuAccessibleBuffer::from_iter(
         vk.device.clone(),
         usage,
         false,
-        dest_content,
+        dest_content.iter().copied(),
     )?;
 
     let set = Arc::new(
@@ -182,28 +187,32 @@ pub fn partition_tris(
             .add_buffer(dest.clone())?
             .build()?,
     );
-    let result = columns.iter().map(|column| {
-        {
-            let mut this_col = columns_buffer.write().unwrap();
-            *this_col = *column;
-        }
-        let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family()).unwrap();
+        let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
         builder.dispatch(
             [
                 (tris.len() as u32 / 32) + 1,
-                1,
+                (columns.len() as u32 / 32) + 1,
                 1,
             ],
             compute_pipeline.clone(),
             set.clone(),
             (),
-        ).unwrap();
-        let command_buffer = builder.build().unwrap();
-        let finished = command_buffer.execute(vk.queue.clone()).unwrap();
-        finished.then_signal_fence_and_flush().unwrap().wait(None).unwrap();
-        let dest_content = dest.read().unwrap();
-        dest_content.to_vec().iter().zip(tris).filter_map(|(x,tri)| if *x {Some(*tri)}else{None}).collect::<Vec<TriangleVk>>() 
-    }).collect();
+        )?;
+        let command_buffer = builder.build()?;
+        let finished = command_buffer.execute(vk.queue.clone())?;
+        finished.then_signal_fence_and_flush()?.wait(None)?;
+        let dest_content = dest.read()?;
+        let dest_content = dest_content.to_vec();
+        let result = (0..columns.len()).map(|column| {
+            (0..tris.len()).filter_map(|tri| {
+                if dest_content[tri + (column * tris.len())] {
+                    Some(tris[tri])
+                } else {
+                    None
+                }
+            }
+            ).collect::<Vec<_>>()
+        }).collect::<Vec<_>>();
     Ok(result)
 }
 
