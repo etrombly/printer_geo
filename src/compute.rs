@@ -164,12 +164,10 @@ pub fn partition_tris(
 
     source_future.then_signal_fence_and_flush()?.wait(None)?;
 
-    let (columns_buffer, columns_future) =
-        ImmutableBuffer::from_iter(columns.iter().copied(), usage, vk.queue.clone())?;
+    let columns_buffer =
+    CpuAccessibleBuffer::from_data(vk.device.clone(), usage, false,columns[0])?;
 
-    columns_future.then_signal_fence_and_flush()?.wait(None)?;
-
-    let dest_content = (0..tris.len()).map(|_| 0u32);
+    let dest_content = (0..tris.len()).map(|_| false);
     let dest = CpuAccessibleBuffer::from_iter(
         vk.device.clone(),
         usage,
@@ -184,25 +182,28 @@ pub fn partition_tris(
             .add_buffer(dest.clone())?
             .build()?,
     );
-    let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
-    builder.dispatch(
-        [
-            (tris.len() as u32 / 32) + 1,
-            (columns.len() as u32 / 32) + 1,
-            1,
-        ],
-        compute_pipeline.clone(),
-        set,
-        (),
-    )?;
-    let command_buffer = builder.build()?;
-    let finished = command_buffer.execute(vk.queue.clone())?;
-    finished.then_signal_fence_and_flush()?.wait(None)?;
-    let dest_content = dest.read()?;
-    println!("{:?}", dest_content.to_vec());
-    //TODO: parse columns from u8 in dest_content
-    let result = Vec::new();
-
+    let result = columns.iter().map(|column| {
+        {
+            let mut this_col = columns_buffer.write().unwrap();
+            *this_col = *column;
+        }
+        let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family()).unwrap();
+        builder.dispatch(
+            [
+                (tris.len() as u32 / 32) + 1,
+                1,
+                1,
+            ],
+            compute_pipeline.clone(),
+            set.clone(),
+            (),
+        ).unwrap();
+        let command_buffer = builder.build().unwrap();
+        let finished = command_buffer.execute(vk.queue.clone()).unwrap();
+        finished.then_signal_fence_and_flush().unwrap().wait(None).unwrap();
+        let dest_content = dest.read().unwrap();
+        dest_content.to_vec().iter().zip(tris).filter_map(|(x,tri)| if *x {Some(*tri)}else{None}).collect::<Vec<TriangleVk>>() 
+    }).collect();
     Ok(result)
 }
 
