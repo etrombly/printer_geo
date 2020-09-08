@@ -4,33 +4,41 @@
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 struct Point {
-    vec3 point;
+    float x;
+    float y;
+    float z;
 };
 
 struct Triangle {
-    vec3 p1;
-    vec3 p2;
-    vec3 p3;
+    float p1x;
+    float p1y;
+    float p1z;
+    float p2x;
+    float p2y;
+    float p2z;
+    float p3x;
+    float p3y;
+    float p3z;
 };
 
-layout(set = 0, binding = 0) readonly buffer Triangles {
+layout(std430, set = 0, binding = 0) readonly buffer Triangles {
     Triangle tri[];
 } tris;
 
-layout(set = 0, binding = 1) buffer Points {
+layout(std430, set = 0, binding = 1) coherent buffer Points {
     Point point[];
 } points;
 
-bool ray_tri_intersect(in vec3 O, in Triangle tri, out float hit) {
+bool ray_tri_intersect(in vec3 O, in vec3 p1, in vec3 p2, in vec3 p3, out float hit) {
     // hard code the direction as casting up
     vec3 D = vec3(0,0,1);
-    vec3 e1 = tri.p2 - tri.p1; 
-    vec3 e2 = tri.p3 - tri.p1; 
+    vec3 e1 = p2 - p1; 
+    vec3 e2 = p3 - p1; 
     vec3 P = cross(D, e2);
     float det = dot(e1, P); 
     if(det > -EPSILON && det < EPSILON) return false; 
     float inv_det = 1.0 / det; 
-    vec3 T = O - tri.p1; 
+    vec3 T = O - p1; 
     float u = dot(T, P) * inv_det; 
     if(u < 0 || u > 1) return false; 
     vec3 Q = cross(T, e1); 
@@ -50,10 +58,14 @@ void main() {
     if (idx <= tris.tri.length() && idy <= points.point.length()){
         float hit = 0;
         // check if the current point in the tool intersects
-        bool intersection = ray_tri_intersect(points.point[idy].point, tris.tri[idx], hit);
+        vec3 origin = vec3(points.point[idy].x, points.point[idy].y, points.point[idy].z);
+        vec3 p1 = vec3(tris.tri[idx].p1x, tris.tri[idx].p1y, tris.tri[idx].p1z);
+        vec3 p2 = vec3(tris.tri[idx].p2x, tris.tri[idx].p2y, tris.tri[idx].p2z);
+        vec3 p3 = vec3(tris.tri[idx].p3x, tris.tri[idx].p3y, tris.tri[idx].p3z);
+        bool intersection = ray_tri_intersect(origin, p1, p2, p3, hit);
         // if Z is higher write it as the current Z
-        if (intersection && hit > points.point[idy].point[2]) {
-            points.point[idy].point[2] = hit;
+        if (intersection && hit > points.point[idy].z) {
+            points.point[idy].z = hit;
         }
     }
 }

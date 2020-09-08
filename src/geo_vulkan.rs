@@ -9,7 +9,7 @@ use std::{
 };
 
 // Compute buffers are 16 byte aligned
-#[repr(C, align(16))]
+#[repr(C)]
 #[derive(Default, Serialize, Deserialize, Copy, Clone)]
 pub struct PointVk {
     pub position: [f32; 3],
