@@ -260,12 +260,14 @@ pub fn partition_tris(
 
     columns_future.then_signal_fence_and_flush()?.wait(None)?;
 
-    // let dest_content = (0..tris.len() * columns.len()).map(|_| false);
+    //let dest_content = (0..((tris.len() * columns.len()) as f32 / 32.).ceil() as usize).map(|_| 0u32);
+
     let mut dest_content: Vec<u32> =
         Vec::with_capacity(((tris.len() * columns.len()) as f32 / 32.).ceil() as usize);
     unsafe {
         dest_content.set_len(((tris.len() * columns.len()) as f32 / 32.).ceil() as usize);
     }
+  
     let dest = CpuAccessibleBuffer::from_iter(
         vk.device.clone(),
         usage,
@@ -302,7 +304,6 @@ pub fn partition_tris(
                 .filter_map(|tri| {
                     let index = (tri + (column * tris.len())) / 32;
                     let pos = (tri + (column * tris.len())) % 32;
-                    println!("{:?} {:?} {:?} {:?} {:?}", index, pos,1 << pos,  dest_content[index], dest_content[index] & (1 << pos));
                     if dest_content[index] & (1 << pos) == (1 << pos) {
                         Some(tris[tri])
                     } else {

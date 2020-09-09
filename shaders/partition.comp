@@ -61,11 +61,15 @@ bool line_intersect(in vec3 rightp1, in vec3 rightp2, in vec3 leftp1, in vec3 le
 
 bool in_column (in vec3 trip1, in vec3 trip2, in vec3 trip3, in vec3 boundsp1, in vec3 boundsp2) {
     //TODO: check both sides of bounds
+    vec3 left = vec3(boundsp1[0], boundsp2[1], boundsp1[2]);
+    vec3 right = vec3(boundsp2[0], boundsp1[1], boundsp2[2]);
     return (trip1[0] >= boundsp1[0] && trip1[0] <= boundsp2[0]) || 
     (trip2[0] >= boundsp1[0] && trip2[0] <= boundsp2[0]) || 
     (trip3[0] >= boundsp1[0] && trip3[0] <= boundsp2[0]) ||
-    line_intersect(trip1, trip2, boundsp1, boundsp2) || line_intersect(trip2, trip3, boundsp1, boundsp2) ||
-    line_intersect(trip1, trip3, boundsp1, boundsp2);
+    line_intersect(trip1, trip2, boundsp1, left) || line_intersect(trip2, trip3, boundsp1, left) ||
+    line_intersect(trip1, trip3, boundsp1, left) ||
+    line_intersect(trip1, trip2, boundsp2, right) || line_intersect(trip2, trip3, boundsp2, right) ||
+    line_intersect(trip1, trip3, boundsp2, right);
 }
 
 void main() {
@@ -76,11 +80,11 @@ void main() {
         vec3 trip2 = vec3(tris.tri[idx].p2x, tris.tri[idx].p2y, tris.tri[idx].p2z);
         vec3 trip3 = vec3(tris.tri[idx].p3x, tris.tri[idx].p3y, tris.tri[idx].p3z);
         vec3 boundsp1 = vec3(columns.line[idy].p1x, columns.line[idy].p1y, columns.line[idy].p1z);
-        vec3 boundsp2 = vec3(columns.line[idy].p1x, columns.line[idy].p1y, columns.line[idy].p1z);
+        vec3 boundsp2 = vec3(columns.line[idy].p2x, columns.line[idy].p2y, columns.line[idy].p2z);
         if (in_column(trip1, trip2, trip3, boundsp1, boundsp2)) {
             uint index = (idx + (idy * tris.tri.length())) / 32;
             uint pos = (idx + (idy * tris.tri.length())) % 32;
-            results.columns[index] = results.columns[index] | (1 << pos);
+            atomicOr(results.columns[index],(1 << pos));
         }
     }
 }
