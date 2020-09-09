@@ -1,6 +1,40 @@
 use nalgebra::{distance, zero, Isometry3, Point3, Vector3};
+use pyo3::prelude::*;
 use rayon::prelude::*;
 use std::{cmp::Ordering, ops::Add};
+
+//#[pyclass]
+//pub struct VkPy {
+//    inner: Vk,
+//}
+
+#[pyclass]
+pub struct TrianglesPy {
+    pub(crate) inner: Vec<Triangle3d>,
+}
+
+#[pyclass]
+pub struct Line3dPy {
+    pub(crate) inner: Line3d,
+}
+
+#[pymodule]
+pub fn geo(py: Python, m: &PyModule) -> PyResult<()> {
+    // PyO3 aware function. All of our Python interfaces could be declared in a
+    // separate module. Note that the `#[pyfn()]` annotation automatically
+    // converts the arguments from Python objects to Rust values, and the Rust
+    // return value back into a Python object. The `_py` argument represents
+    // that we're holding the GIL.
+    #[pyfn(m, "get_bounds")]
+    fn get_bounds_py(_py: Python, tris: &TrianglesPy) -> PyResult<Line3dPy> {
+        let bounds = Line3dPy {
+            inner: get_bounds(&tris.inner),
+        };
+        Ok(bounds)
+    }
+
+    Ok(())
+}
 
 pub type Point3d = Point3<f32>;
 

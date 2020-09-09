@@ -1,4 +1,5 @@
 pub use crate::geo_vulkan::*;
+use pyo3::prelude::*;
 use std::sync::Arc;
 use thiserror::Error;
 use vulkano::{
@@ -14,6 +15,29 @@ use vulkano::{
     pipeline::ComputePipeline,
     sync::GpuFuture,
 };
+
+#[pyclass]
+pub struct VkPy {
+    inner: Vk,
+}
+
+#[pymodule]
+pub fn compute(py: Python, m: &PyModule) -> PyResult<()> {
+    // PyO3 aware function. All of our Python interfaces could be declared in a
+    // separate module. Note that the `#[pyfn()]` annotation automatically
+    // converts the arguments from Python objects to Rust values, and the Rust
+    // return value back into a Python object. The `_py` argument represents
+    // that we're holding the GIL.
+    #[pyfn(m, "init_vk")]
+    fn init_vk_py(_py: Python) -> PyResult<VkPy> {
+        let vkpy = VkPy {
+            inner: Vk::new().unwrap(),
+        };
+        Ok(vkpy)
+    }
+
+    Ok(())
+}
 
 #[derive(Error, Debug)]
 pub enum VkError {
@@ -260,15 +284,16 @@ pub fn partition_tris(
 
     columns_future.then_signal_fence_and_flush()?.wait(None)?;
 
-    //let dest_content = (0..((tris.len() * columns.len()) as f32 / 32.).ceil() as usize).map(|_| 0u32);
+    //let dest_content = (0..((tris.len() * columns.len()) as f32 / 32.).ceil() as
+    // usize).map(|_| 0u32);
 
-    let count = ((tris.len() as f32 -1.) + ((columns.len() as f32 -1.) * tris.len() as f32) / 32.).ceil() as usize;
-    let mut dest_content: Vec<u32> =
-        Vec::with_capacity(count);
+    let count = ((tris.len() as f32 - 1.) + ((columns.len() as f32 - 1.) * tris.len() as f32) / 32.)
+        .ceil() as usize;
+    let mut dest_content: Vec<u32> = Vec::with_capacity(count);
     unsafe {
         dest_content.set_len(count);
     }
-    
+
     let dest = CpuAccessibleBuffer::from_iter(
         vk.device.clone(),
         usage,
@@ -299,7 +324,7 @@ pub fn partition_tris(
     finished.then_signal_fence_and_flush()?.wait(None)?;
     let dest_content = dest.read()?;
     let dest_content = dest_content.to_vec();
-    
+
     let result = (0..columns.len())
         .map(|column| {
             (0..tris.len())
