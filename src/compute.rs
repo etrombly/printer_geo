@@ -262,12 +262,13 @@ pub fn partition_tris(
 
     //let dest_content = (0..((tris.len() * columns.len()) as f32 / 32.).ceil() as usize).map(|_| 0u32);
 
+    let count = ((tris.len() as f32 -1.) + ((columns.len() as f32 -1.) * tris.len() as f32) / 32.).ceil() as usize;
     let mut dest_content: Vec<u32> =
-        Vec::with_capacity(((tris.len() * columns.len()) as f32 / 32.).ceil() as usize);
+        Vec::with_capacity(count);
     unsafe {
-        dest_content.set_len(((tris.len() * columns.len()) as f32 / 32.).ceil() as usize);
+        dest_content.set_len(count);
     }
-  
+    
     let dest = CpuAccessibleBuffer::from_iter(
         vk.device.clone(),
         usage,
@@ -298,6 +299,7 @@ pub fn partition_tris(
     finished.then_signal_fence_and_flush()?.wait(None)?;
     let dest_content = dest.read()?;
     let dest_content = dest_content.to_vec();
+    
     let result = (0..columns.len())
         .map(|column| {
             (0..tris.len())
