@@ -1,17 +1,24 @@
+//! # Geo
+//!
+//! Collection of geometric types and functions useful for 3d models and CAM
+//! mostly wraps Nalgebra types with some additional functionality
+
 use nalgebra::{distance, zero, Isometry3, Point3, Vector3};
 use rayon::prelude::*;
 use std::{cmp::Ordering, ops::Add};
 
+/// Wrapper for Nalgebra Point3<f32>
 pub type Point3d = Point3<f32>;
 
 /// check if any value in point is infinite
 pub fn is_point_inf(point: &Point3d) -> bool { point.iter().any(|x| x.is_infinite()) }
 
-/// // check if any value in point is nan
+/// check if any value in point is nan
 pub fn is_point_nan(point: &Point3d) -> bool { point.iter().any(|x| x.is_nan()) }
 
 const PRECISION: f32 = 0.001;
 
+/// Trait for intersection of different geo types
 pub trait Intersect<RHS = Self> {
     type Output;
     fn intersect(self, rhs: RHS) -> Self::Output;
@@ -33,15 +40,67 @@ impl Line3d {
 
     pub fn from_points(p1: &Point3d, p2: &Point3d) -> Line3d { Line3d { p1: *p1, p2: *p2 } }
 
+    /// Check if point is on line segment
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use printer_geo::geo::{Line3d, Point3d};
+    /// let point = Point3d::new(1., 1., 1.);
+    /// let bounds = Line3d::new((0., 0., 1.), (2., 2., 1.));
+    /// assert!(bounds.on_line(&point));
+    /// ```
     pub fn on_line(&self, point: &Point3d) -> bool {
         (distance(&self.p1, point) + distance(&self.p2, point)) - distance(&self.p1, &self.p2)
             < PRECISION
     }
 
+    /// Check if point is within bounds defined by current line
+    /// ignores Z axis
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use printer_geo::geo::{Line3d, Point3d};
+    /// let point = Point3d::new(1., 1., 1.);
+    /// let bounds = Line3d::new((0., 0., 0.), (2., 2., 0.));
+    /// assert!(bounds.in_2d_bounds(&point));
+    /// ```
     pub fn in_2d_bounds(&self, point: &Point3d) -> bool {
         point.x >= self.p1.x && point.x <= self.p2.x && point.y >= self.p1.y && point.y <= self.p2.y
     }
 
+    pub fn intersect_2d(self, other: &Line3d) -> bool {
+        // modified from https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect/565282#565282
+        let cm_p = Point3d::new(other.p1[0] - self.p1[0], other.p1[1] - self.p1[1], 0.);
+		let r = Point3d::new(self.p2[0] - self.p1[0], self.p2[1] - self.p1[1], 0.);
+		let s = Point3d::new(other.p2[0] - other.p1[0], other.p2[1] - other.p1[1], 0.);
+ 
+		let cm_pxr = cm_p[0] * r[1] - cm_p[1] * r[0];
+		let cm_pxs = cm_p[0] * s[1] - cm_p[1] * s[0];
+		let rxs = r[0] * s[1] - r[1] * s[0];
+ 
+		if cm_pxr == 0. {
+			// Lines are collinear, and so intersect if they have any overlap
+ 
+			return ((other.p1[0] - self.p1[0] < 0.) != (other.p1[0] - self.p2[0] < 0.))
+				|| ((other.p1[1] - self.p1[1] < 0.) != (other.p1[1] - self.p2[1] < 0.));
+		}
+ 
+		if rxs == 0. {
+            // Lines are parallel.
+            return false; 
+        }
+ 
+		let rxsr = 1. / rxs;
+		let t = cm_pxs * rxsr;
+		let u = cm_pxr * rxsr;
+ 
+        (t >= 0.) && (t <= 1.) && (u >= 0.) && (u <= 1.)
+        
+    }
+
+    /// create bounding box from line
     pub fn bbox(self) -> Line3d {
         Line3d {
             p1: Point3d::new(self.min_x(), self.min_y(), self.min_z()),
@@ -134,10 +193,38 @@ impl Triangle3d {
         }
     }
 
+    /// Check if triangle is within bounding box, 
+    /// ignoring Z axis
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use printer_geo::geo::{Line3d, Triangle3d};
+    /// let tri = Triangle3d::new((1., 1., 1.), (1., 2., 1.), (2., 1., 1.));
+    /// let bounds = Line3d::new((0., 0., 1.), (2., 2., 1.));
+    /// assert!(tri.in_2d_bounds(&bounds));
+    /// ```
     pub fn in_2d_bounds(&self, bbox: &Line3d) -> bool {
-        bbox.in_2d_bounds(&self.p1) || bbox.in_2d_bounds(&self.p2) || bbox.in_2d_bounds(&self.p3)
+        let left = Line3d{p1: bbox.p1, p2: Point3d::new(bbox.p1[0], bbox.p2[1], bbox.p1[2])};
+        let right = Line3d{p1: bbox.p2, p2: Point3d::new(bbox.p2[0], bbox.p1[1], bbox.p2[2])};
+        let line1 = Line3d{p1: self.p1, p2: self.p2};
+        let line2 = Line3d{p1: self.p2, p2: self.p3};
+        let line3 = Line3d{p1: self.p1, p2: self.p3};
+        bbox.in_2d_bounds(&self.p1) || bbox.in_2d_bounds(&self.p2) || bbox.in_2d_bounds(&self.p3) ||
+    left.intersect_2d(&line1) || left.intersect_2d(&line2) || left.intersect_2d(&line3) || 
+    right.intersect_2d(&line1) || right.intersect_2d(&line2) || right.intersect_2d(&line3)
     }
 
+    /// Move triangle
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use printer_geo::geo::Triangle3d;
+    /// let mut tri = Triangle3d::new((1., 1., 1.), (1., 2., 1.), (2., 1., 1.));
+    /// tri.translate(1., 0., 0.);
+    /// assert_eq!(tri, Triangle3d::new((2., 1., 1.), (2., 2., 1.), (3., 1., 1.)));
+    /// ```
     pub fn translate(&mut self, x: f32, y: f32, z: f32) {
         let iso = Isometry3::new(Vector3::new(x, y, z), zero());
         self.p1 = iso.transform_point(&self.p1);
@@ -242,6 +329,17 @@ pub struct Circle {
 impl Circle {
     pub fn new(center: Point3d, radius: f32) -> Circle { Circle { center, radius } }
 
+    /// Check if point is in circle, 
+    /// ignoring Z axis
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use printer_geo::geo::{Point3d, Circle};
+    /// let circle = Circle::new(Point3d::new(0., 0., 0.), 10.);
+    /// let point = Point3d::new(1., 1., 1.);
+    /// assert!(circle.in_2d_bounds(&point));
+    /// ```
     pub fn in_2d_bounds(&self, point: &Point3d) -> bool {
         let dx = f32::abs(point.x - self.center.x);
         let dy = f32::abs(point.y - self.center.y);
@@ -288,6 +386,7 @@ impl Shape {
     pub fn is_line(&self) -> bool { matches!(*self, Shape::Line3d(_)) }
 }
 
+/// Get bounds for list of triangles
 pub fn get_bounds(tris: &[Triangle3d]) -> Line3d {
     tris.par_iter().map(|tri| tri.bbox()).reduce(
         || Line3d {
@@ -316,4 +415,12 @@ pub fn get_bounds(tris: &[Triangle3d]) -> Line3d {
             acc
         },
     )
+}
+
+/// Move triangles to x:0 y:0 and z_max: 0
+pub fn move_to_zero(tris: &mut Vec<Triangle3d>) {
+    // get the bounds for the model
+    let bounds = get_bounds(tris);
+    tris.par_iter_mut()
+        .for_each(|tri| tri.translate(-bounds.p1.x, -bounds.p1.y, -bounds.p2.z));
 }

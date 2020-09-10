@@ -1,4 +1,4 @@
-use crate::geo::{get_bounds, Line3d, Triangle3d};
+use crate::geo::{get_bounds, move_to_zero, Line3d, Triangle3d};
 use pyo3::prelude::*;
 
 #[pyclass]
@@ -17,19 +17,16 @@ pub struct Line3dPy {
 }
 
 #[pymodule]
-pub fn geo(py: Python, m: &PyModule) -> PyResult<()> {
-    // PyO3 aware function. All of our Python interfaces could be declared in a
-    // separate module. Note that the `#[pyfn()]` annotation automatically
-    // converts the arguments from Python objects to Rust values, and the Rust
-    // return value back into a Python object. The `_py` argument represents
-    // that we're holding the GIL.
+pub fn geo(_py: Python, m: &PyModule) -> PyResult<()> {
     #[pyfn(m, "get_bounds")]
-    fn get_bounds_py(_py: Python, tris: &TrianglesPy) -> PyResult<Line3dPy> {
-        let bounds = Line3dPy {
+    fn get_bounds_py(_py: Python, tris: &TrianglesPy) -> Line3dPy {
+        Line3dPy {
             inner: get_bounds(&tris.inner),
-        };
-        Ok(bounds)
+        }
     }
+
+    #[pyfn(m, "move_to_zero")]
+    fn move_to_zero_py(_py: Python, tris: &mut TrianglesPy) { move_to_zero(&mut tris.inner); }
 
     Ok(())
 }

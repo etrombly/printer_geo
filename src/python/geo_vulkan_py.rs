@@ -1,4 +1,7 @@
-use crate::{geo_vulkan::*, python::geo_py::*};
+use crate::{
+    geo_vulkan::{to_tri_vk, LineVk, PointVk, Tool, TriangleVk},
+    python::geo_py::TrianglesPy,
+};
 use pyo3::prelude::*;
 
 #[pyclass]
@@ -11,8 +14,31 @@ impl From<Vec<TriangleVk>> for TrianglesVkPy {
 }
 
 #[pyclass]
+pub struct LinesVkPy {
+    pub(crate) inner: Vec<LineVk>,
+}
+
+impl From<Vec<LineVk>> for LinesVkPy {
+    fn from(lines: Vec<LineVk>) -> Self { LinesVkPy { inner: lines } }
+}
+
+#[pyclass]
 pub struct LineVkPy {
     pub(crate) inner: LineVk,
+}
+
+#[pyclass]
+pub struct PointVkPy {
+    pub(crate) inner: PointVk,
+}
+
+#[pyclass]
+pub struct PointsVkPy {
+    pub(crate) inner: Vec<PointVk>,
+}
+
+impl From<Vec<PointVk>> for PointsVkPy {
+    fn from(points: Vec<PointVk>) -> Self { PointsVkPy { inner: points } }
 }
 
 #[pyclass]
@@ -25,12 +51,7 @@ impl From<Tool> for ToolPy {
 }
 
 #[pymodule]
-pub fn geo_vulkan(py: Python, m: &PyModule) -> PyResult<()> {
-    // PyO3 aware function. All of our Python interfaces could be declared in a
-    // separate module. Note that the `#[pyfn()]` annotation automatically
-    // converts the arguments from Python objects to Rust values, and the Rust
-    // return value back into a Python object. The `_py` argument represents
-    // that we're holding the GIL.
+pub fn geo_vulkan(_py: Python, m: &PyModule) -> PyResult<()> {
     #[pyfn(m, "to_tri_vk")]
     fn to_tri_vk_py(_py: Python, tris: TrianglesPy) -> PyResult<TrianglesVkPy> {
         Ok(to_tri_vk(&tris.inner).into())
@@ -47,7 +68,7 @@ pub fn geo_vulkan(py: Python, m: &PyModule) -> PyResult<()> {
     }
 
     #[pyfn(m, "new_ball")]
-    fn new_ball_py(_py: Python, radius: f32, angle: f32, scale: f32) -> PyResult<ToolPy> {
+    fn new_ball_py(_py: Python, radius: f32, scale: f32) -> PyResult<ToolPy> {
         Ok(Tool::new_ball(radius, scale).into())
     }
 

@@ -1,3 +1,7 @@
+//! # Compute
+//!
+//! Module for running compute shaders on vulkan
+
 pub use crate::geo_vulkan::*;
 use std::sync::Arc;
 use thiserror::Error;
@@ -6,7 +10,6 @@ use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, CommandBuffer},
     descriptor::{descriptor_set::PersistentDescriptorSet, PipelineLayoutAbstract},
     device::{Device, DeviceExtensions, Features, Queue},
-    instance,
     instance::{
         debug::{DebugCallback, MessageSeverity, MessageType},
         Instance, InstanceExtensions, PhysicalDevice,
@@ -16,6 +19,7 @@ use vulkano::{
 };
 
 #[derive(Error, Debug)]
+/// Error types for vulkan devices
 pub enum VkError {
     #[error("Unable to create vulkan instance")]
     Instance(#[from] vulkano::instance::InstanceCreationError),
@@ -30,6 +34,7 @@ pub enum VkError {
 }
 
 #[derive(Error, Debug)]
+/// Error types for vulkan compute operations
 pub enum ComputeError {
     #[error("Failed to create compute shader")]
     Shader(#[from] vulkano::OomError),
@@ -55,6 +60,7 @@ pub enum ComputeError {
     Layout,
 }
 
+/// Holds vulkan device and queue
 pub struct Vk {
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
@@ -62,6 +68,7 @@ pub struct Vk {
 }
 
 impl Vk {
+    /// Create a new vulkan instance
     pub fn new() -> Result<Vk, VkError> {
         let instance = Instance::new(None, &InstanceExtensions::none(), None)?;
         let physical = PhysicalDevice::enumerate(&instance)
@@ -91,17 +98,12 @@ impl Vk {
         })
     }
 
+    /// Create a new vulkan instance with validation layers
     pub fn new_debug() -> Result<Vk, VkError> {
         let extensions = InstanceExtensions {
             ext_debug_utils: true,
             ..InstanceExtensions::none()
         };
-
-        println!("List of Vulkan debugging layers available to use:");
-        let mut layers = instance::layers_list().unwrap();
-        while let Some(l) = layers.next() {
-            println!("\t{}", l.name());
-        }
 
         let layer = "VK_LAYER_KHRONOS_validation";
         let layers = vec![layer];
@@ -174,11 +176,20 @@ impl Vk {
     }
 }
 
-pub fn compute_drop(
+/// Calculate intersection of points and triangles
+///
+/// # Arguments
+///
+/// * `tris` - Model to calculate intersections
+/// * `points` - List of points to intersect
+/// * `vk` - Vulkan instance
+///
+pub fn intersect_tris(
     tris: &[TriangleVk],
-    dest_content: &[PointVk],
+    points: &[PointVk],
     vk: &Vk,
 ) -> Result<Vec<PointVk>, ComputeError> {
+    // load compute shader
     let shader = drop::Shader::load(vk.device.clone())?;
     let compute_pipeline = Arc::new(ComputePipeline::new(
         vk.device.clone(),
@@ -191,18 +202,22 @@ pub fn compute_drop(
         .descriptor_set_layout(0)
         .ok_or_else(|| ComputeError::Layout)?;
 
+    // set up ssbo buffer
     let mut usage = BufferUsage::transfer_source();
     usage.storage_buffer = true;
 
+    // copy tris into source buffer
     let (source, source_future) =
         ImmutableBuffer::from_iter(tris.iter().copied(), usage, vk.queue.clone())?;
-
     source_future.then_signal_fence_and_flush()?.wait(None)?;
+
+    // copy points into dest buffer, used for input and output because
+    // the length and type of inputs and outputs are the same
     let dest = CpuAccessibleBuffer::from_iter(
         vk.device.clone(),
         usage,
         false,
-        dest_content.iter().copied(),
+        points.iter().copied(),
     )?;
 
     let set = Arc::new(
@@ -212,10 +227,12 @@ pub fn compute_drop(
             .build()?,
     );
     let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
+
+    // using 32 as local workgroup size. Most documentation says to set it to 64, but it ran slower that way
     builder.dispatch(
         [
             (tris.len() as u32 / 32) + 1,
-            (dest_content.len() as u32 / 32) + 1,
+            (points.len() as u32 / 32) + 1,
             1,
         ],
         compute_pipeline.clone(),
@@ -230,11 +247,20 @@ pub fn compute_drop(
     Ok(dest_content.to_vec())
 }
 
+/// Split triangles into columns they are contained in
+///
+/// # Arguments
+///
+/// * `tris` - List of triangles to partition
+/// * `columns` - List of bounding boxes to partition with
+/// * `vk` - Vulkan instance
+///
 pub fn partition_tris(
     tris: &[TriangleVk],
     columns: &[LineVk],
     vk: &Vk,
 ) -> Result<Vec<Vec<TriangleVk>>, ComputeError> {
+    // load compute shader
     let shader = partition::Shader::load(vk.device.clone())?;
     let compute_pipeline = Arc::new(ComputePipeline::new(
         vk.device.clone(),
@@ -247,6 +273,7 @@ pub fn partition_tris(
         .descriptor_set_layout(0)
         .ok_or_else(|| ComputeError::Layout)?;
 
+    // set up ssbo buffer
     let mut usage = BufferUsage::transfer_source();
     usage.storage_buffer = true;
 
@@ -260,11 +287,12 @@ pub fn partition_tris(
 
     columns_future.then_signal_fence_and_flush()?.wait(None)?;
 
-    //let dest_content = (0..((tris.len() * columns.len()) as f32 / 32.).ceil() as
-    // usize).map(|_| 0u32);
-
+    // booleans in glsl are 32 bits, so using a bitmask here to hold what columns each triangle
+    // is partitioned into instead. We can pack 32 bools into a u32, and need one set of columns per tri
     let count = ((tris.len() as f32 - 1.) + ((columns.len() as f32 - 1.) * tris.len() as f32) / 32.)
         .ceil() as usize;
+    // save some time by not initializing the vec, wasn't sure if this would be a problem setting up the buffer
+    // but it seems to be working well
     let mut dest_content: Vec<u32> = Vec::with_capacity(count);
     unsafe {
         dest_content.set_len(count);
@@ -285,6 +313,7 @@ pub fn partition_tris(
             .build()?,
     );
     let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
+    // using 32 as local workgroup size. Most documentation says to set it to 64, but it ran slower that way
     builder.dispatch(
         [
             (tris.len() as u32 / 32) + 1,
@@ -301,6 +330,7 @@ pub fn partition_tris(
     let dest_content = dest.read()?;
     let dest_content = dest_content.to_vec();
 
+    // have to unpack the bitmask to determine what columns each tri belongs in
     let result = (0..columns.len())
         .map(|column| {
             (0..tris.len())

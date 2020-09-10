@@ -1,4 +1,4 @@
-use crate::{python::geo_py::*, stl::*};
+use crate::{python::geo_py::TrianglesPy, stl::stl_to_tri};
 use pyo3::prelude::*;
 
 #[pymodule]

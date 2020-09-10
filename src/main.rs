@@ -3,6 +3,11 @@ use rayon::prelude::*;
 use std::{fs::File, io::Write};
 
 fn main() {
+    let tri = Triangle3d::new((0., 0., 1.), (4., 4., 1.), (3., 3., 1.));
+    let bounds = Line3d::new((1., 1., 1.), (2., 2., 1.));
+    assert_eq!(tri.in_2d_bounds(&bounds), true);
+    let tri = Triangle3d::new((3., 3., 1.), (4., 4., 1.), (5., 5., 1.));
+    assert_eq!(tri.in_2d_bounds(&bounds), false);
     // let stl = load_stl("3DBenchy.stl");
     //
     // let triangles = to_triangles3d(&stl);
