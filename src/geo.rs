@@ -47,11 +47,11 @@ impl Line3d {
     /// ```
     /// use printer_geo::geo::{Line3d, Point3d};
     /// let point = Point3d::new(1., 1., 1.);
-    /// let bounds = Line3d::new((0., 0., 1.), (2., 2., 1.));
-    /// assert!(bounds.on_line(&point));
+    /// let line = Line3d::new((0., 0., 1.), (2., 2., 1.));
+    /// assert!(line.on_line_2d(&point));
     /// ```
-    pub fn on_line(&self, point: &Point3d) -> bool {
-        (distance(&self.p1, point) + distance(&self.p2, point)) - distance(&self.p1, &self.p2)
+    pub fn on_line_2d(&self, point: &Point3d) -> bool {
+        (distance(&self.p1.xy(), &point.xy()) + distance(&self.p2.xy(), &point.xy())) - distance(&self.p1.xy(), &self.p2.xy())
             < PRECISION
     }
 
@@ -70,37 +70,41 @@ impl Line3d {
         point.x >= self.p1.x && point.x <= self.p2.x && point.y >= self.p1.y && point.y <= self.p2.y
     }
 
+    /// Check if line segments intersect
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use printer_geo::geo::Line3d;
+    /// let line1 = Line3d::new((0., 0., 0.), (1., 1., 1.));
+    /// let line2 = Line3d::new((1., 0., 1.), (0., 1., 0.));
+    /// assert!(line1.intersect_2d(&line2));
+    /// ```
     pub fn intersect_2d(self, other: &Line3d) -> bool {
         // modified from https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect/565282#565282
-        let cm_p = Point3d::new(other.p1[0] - self.p1[0], other.p1[1] - self.p1[1], 0.);
-		let r = Point3d::new(self.p2[0] - self.p1[0], self.p2[1] - self.p1[1], 0.);
-		let s = Point3d::new(other.p2[0] - other.p1[0], other.p2[1] - other.p1[1], 0.);
- 
-		let cm_pxr = cm_p[0] * r[1] - cm_p[1] * r[0];
-		let cm_pxs = cm_p[0] * s[1] - cm_p[1] * s[0];
-		let rxs = r[0] * s[1] - r[1] * s[0];
- 
-		if cm_pxr == 0. {
-			// Lines are collinear, and so intersect if they have any overlap
- 
-			return ((other.p1[0] - self.p1[0] < 0.) != (other.p1[0] - self.p2[0] < 0.))
-				|| ((other.p1[1] - self.p1[1] < 0.) != (other.p1[1] - self.p2[1] < 0.));
-		}
- 
-		if rxs == 0. {
-            // Lines are parallel.
-            return false; 
-        }
- 
-		let rxsr = 1. / rxs;
-		let t = cm_pxs * rxsr;
-		let u = cm_pxr * rxsr;
- 
-        (t >= 0.) && (t <= 1.) && (u >= 0.) && (u <= 1.)
+        let s1_x = self.p2[0] - self.p1[0]; 
+        let s1_y = self.p2[1] - self.p1[1];
+        let s2_x = other.p2[0] - other.p1[0];     
+        let s2_y = other.p2[1] - other.p1[1];
+    
+        let denominator = -s2_x * s1_y + s1_x * s2_y;
+        if denominator != 0. {
+            let s = (-s1_y * (self.p1[0] - other.p1[0]) + s1_x * (self.p1[1] - other.p1[1])) / denominator;
+            let t = ( s2_x * (self.p1[1] - other.p1[1]) - s2_y * (self.p1[0] - other.p1[0])) / denominator;
         
+            if s >= 0. && s <= 1. && t >= 0. && t <= 1.{
+                let intersect_x = self.p1[0] + (t * s1_x);
+                let intersect_y = self.p1[1] + (t * s1_y);
+                self.on_line_2d(&Point3d::new(intersect_x, intersect_y, 0.))
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
 
-    /// create bounding box from line
+    /// Create bounding box from line
     pub fn bbox(self) -> Line3d {
         Line3d {
             p1: Point3d::new(self.min_x(), self.min_y(), self.min_z()),
