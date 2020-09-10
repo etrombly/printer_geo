@@ -8,7 +8,6 @@ use std::{
     ops::{Add, Index},
 };
 
-// Compute buffers are 16 byte aligned
 #[repr(C)]
 #[derive(Default, Serialize, Deserialize, Copy, Clone)]
 pub struct PointVk {
@@ -94,6 +93,8 @@ pub struct TriangleVk {
     pub p3: PointVk,
 }
 
+pub type TrianglesVk = Vec<TriangleVk>;
+
 impl TriangleVk {
     pub fn new(p1: (f32, f32, f32), p2: (f32, f32, f32), p3: (f32, f32, f32)) -> TriangleVk {
         TriangleVk {
@@ -154,6 +155,20 @@ impl TriangleVk {
             })
             .intersect2d(bound2)
     }
+}
+
+impl From<&Triangle3d> for TriangleVk {
+    fn from(tri: &Triangle3d) -> Self {
+        TriangleVk {
+            p1: PointVk::new(tri.p1.x, tri.p1.y, tri.p1.z),
+            p2: PointVk::new(tri.p2.x, tri.p2.y, tri.p2.z),
+            p3: PointVk::new(tri.p3.x, tri.p3.y, tri.p3.z),
+        }
+    }
+}
+
+pub fn to_tri_vk(tris: &[Triangle3d]) -> Vec<TriangleVk> {
+    tris.iter().map(|tri| tri.into()).collect()
 }
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -315,16 +330,6 @@ impl Tool {
         points.dedup();
         points
     }
-}
-
-pub fn to_tri_vk(tris: &[Triangle3d]) -> Vec<TriangleVk> {
-    tris.iter()
-        .map(|tri| TriangleVk {
-            p1: PointVk::new(tri.p1.x, tri.p1.y, tri.p1.z),
-            p2: PointVk::new(tri.p2.x, tri.p2.y, tri.p2.z),
-            p3: PointVk::new(tri.p3.x, tri.p3.y, tri.p3.z),
-        })
-        .collect()
 }
 
 pub fn to_line3d(line: &LineVk) -> Line3d {

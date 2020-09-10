@@ -1,30 +1,10 @@
 use crate::geo::*;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use pyo3::prelude::*;
 use rayon::prelude::*;
 use std::{
     fs::File,
     io::{BufReader, Error, ErrorKind, Result},
 };
-
-#[pymodule]
-pub fn stl(py: Python, m: &PyModule) -> PyResult<()> {
-    // PyO3 aware function. All of our Python interfaces could be declared in a
-    // separate module. Note that the `#[pyfn()]` annotation automatically
-    // converts the arguments from Python objects to Rust values, and the Rust
-    // return value back into a Python object. The `_py` argument represents
-    // that we're holding the GIL.
-    #[pyfn(m, "load_stl")]
-    fn load_stl_py(_py: Python, filename: &str) -> PyResult<TrianglesPy> {
-        let file = File::open(filename)?;
-        let mut buf_reader = BufReader::new(file);
-        let stl = read_stl(&mut buf_reader)?;
-        let triangles = to_triangles3d(&stl);
-        Ok(TrianglesPy { inner: triangles })
-    }
-
-    Ok(())
-}
 
 pub struct Triangle {
     pub normal: [f32; 3],
