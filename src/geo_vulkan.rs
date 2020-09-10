@@ -1,3 +1,7 @@
+//! # Geo_Vulkan
+//!
+//! Conversions of geo types to be compatible with vulkan
+
 use crate::geo::*;
 use float_cmp::approx_eq;
 use serde::{Deserialize, Serialize};
@@ -212,6 +216,15 @@ impl LineVk {
     }
 }
 
+impl From<&Line3d> for LineVk {
+    fn from(line: &Line3d) -> Self {
+        LineVk {
+            p1: PointVk::new(line.p1.x, line.p1.y, line.p1.z),
+            p2: PointVk::new(line.p2.x, line.p2.y, line.p2.z),
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct CircleVk {
     pub center: PointVk,
@@ -254,6 +267,7 @@ impl CircleVk {
     fn max_z(self) -> f32 { self.center[2] }
 }
 
+/// Tool for CAM operations, represented as a point cloud
 #[derive(Default, Clone)]
 pub struct Tool {
     pub bbox: LineVk,
@@ -329,12 +343,5 @@ impl Tool {
         points.sort();
         points.dedup();
         points
-    }
-}
-
-pub fn to_line3d(line: &LineVk) -> Line3d {
-    Line3d {
-        p1: Point3d::new(line.p1[0], line.p1[1], line.p1[2]),
-        p2: Point3d::new(line.p2[0], line.p2[1], line.p2[2]),
     }
 }

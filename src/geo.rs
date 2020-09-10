@@ -70,7 +70,7 @@ impl Line3d {
         point.x >= self.p1.x && point.x <= self.p2.x && point.y >= self.p1.y && point.y <= self.p2.y
     }
 
-    /// Check if line segments intersect
+    /// Check if line segments intersect, ignoring Z axis
     ///
     /// # Examples
     ///
@@ -81,27 +81,22 @@ impl Line3d {
     /// assert!(line1.intersect_2d(&line2));
     /// ```
     pub fn intersect_2d(self, other: &Line3d) -> bool {
-        // modified from https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect/565282#565282
-        let s1_x = self.p2[0] - self.p1[0]; 
-        let s1_y = self.p2[1] - self.p1[1];
-        let s2_x = other.p2[0] - other.p1[0];     
-        let s2_y = other.p2[1] - other.p1[1];
-    
-        let denominator = -s2_x * s1_y + s1_x * s2_y;
-        if denominator != 0. {
-            let s = (-s1_y * (self.p1[0] - other.p1[0]) + s1_x * (self.p1[1] - other.p1[1])) / denominator;
-            let t = ( s2_x * (self.p1[1] - other.p1[1]) - s2_y * (self.p1[0] - other.p1[0])) / denominator;
-        
-            if s >= 0. && s <= 1. && t >= 0. && t <= 1.{
-                let intersect_x = self.p1[0] + (t * s1_x);
-                let intersect_y = self.p1[1] + (t * s1_y);
-                self.on_line_2d(&Point3d::new(intersect_x, intersect_y, 0.))
-            } else {
-                false
-            }
-        } else {
-            false
-        }
+        let a1 = self.p2[1] - self.p1[1];
+        let b1 = self.p1[0] - self.p2[0];
+        let c1 = a1 * self.p1[0] + b1 * self.p1[1];
+
+        let a2 = other.p2[1] - other.p1[1];
+        let b2 = other.p1[0] - other.p2[0];
+        let c2 = a2 * other.p1[0] + b2 * other.p1[1];
+
+        let delta = a1 * b2 - a2 * b1;
+        let x = (b2 * c1 - b1 * c2) / delta;
+        let y = (a1 * c2 - a2 * c1) / delta;
+        delta != 0.0
+            && self.p1[0].min(self.p2[0]) <= x
+            && x <= self.p1[0].max(self.p2[0])
+            && self.p1[1].min(self.p2[1]) <= y
+            && y <= self.p1[1].max(self.p2[1])
     }
 
     /// Create bounding box from line
