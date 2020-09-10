@@ -1,6 +1,5 @@
+use crate::{geo_vulkan::*, python::geo_py::*};
 use pyo3::prelude::*;
-use crate::geo_vulkan::*;
-use crate::python::geo_py::*;
 
 #[pyclass]
 pub struct TrianglesVkPy {
@@ -8,9 +7,7 @@ pub struct TrianglesVkPy {
 }
 
 impl From<Vec<TriangleVk>> for TrianglesVkPy {
-    fn from(tris: Vec<TriangleVk>) -> Self {
-        TrianglesVkPy{inner: tris}
-    }
+    fn from(tris: Vec<TriangleVk>) -> Self { TrianglesVkPy { inner: tris } }
 }
 
 #[pyclass]
@@ -24,9 +21,7 @@ pub struct ToolPy {
 }
 
 impl From<Tool> for ToolPy {
-    fn from(tool: Tool) -> Self {
-        ToolPy{inner: tool}
-    }
+    fn from(tool: Tool) -> Self { ToolPy { inner: tool } }
 }
 
 #[pymodule]

@@ -4,12 +4,14 @@ use pyo3::{prelude::*, wrap_pymodule};
 pub mod compute;
 pub mod geo;
 pub mod geo_vulkan;
-pub mod stl;
 #[cfg(feature = "python")]
 pub mod python;
+pub mod stl;
 
 #[cfg(feature = "python")]
-use crate::{python::compute_py::*, python::stl_py::*, python::geo_py::*, python::geo_vulkan_py::*};
+use crate::{
+    python::compute_py::*, python::geo_py::*, python::geo_vulkan_py::*, python::stl_py::*,
+};
 
 #[cfg(feature = "python")]
 #[pymodule]

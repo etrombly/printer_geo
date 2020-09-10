@@ -4,6 +4,7 @@ use rayon::prelude::*;
 use std::{
     fs::File,
     io::{BufReader, Error, ErrorKind, Result},
+    path::Path,
 };
 
 pub struct Triangle {
@@ -97,7 +98,7 @@ pub fn read_stl<T: ReadBytesExt>(input: &mut T) -> Result<BinaryStlFile> {
     Ok(BinaryStlFile { header, triangles })
 }
 
-pub fn stl_to_tri(filename: &str) -> Result<Vec<Triangle3d>> {
+pub fn stl_to_tri<P: AsRef<Path>>(filename: P) -> Result<Vec<Triangle3d>> {
     let file = File::open(filename)?;
     let mut buf_reader = BufReader::new(file);
     let stl = read_stl(&mut buf_reader)?;
