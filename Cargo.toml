@@ -21,6 +21,8 @@ vulkano-shaders = "0.19.0"
 nalgebra = "0.22.0"
 thiserror = "1.0.20"
 float-cmp = "0.8.0"
+structopt = "0.3.17"
+clap = "2.33.3"
 
 [dependencies.serde]
 version = "1.0.115"
@@ -28,7 +30,7 @@ features =["derive"]
 
 [dependencies.pyo3]
 version = "0.11.1"
-features = ["extension-module"]
+features = ["extension-module", "nightly"]
 optional = true
 
 [dev-dependencies]

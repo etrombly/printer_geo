@@ -2,6 +2,7 @@
 use pyo3::{prelude::*, wrap_pymodule};
 
 pub mod compute;
+pub mod config;
 pub mod geo;
 pub mod geo_vulkan;
 #[cfg(feature = "python")]
@@ -10,7 +11,8 @@ pub mod stl;
 
 #[cfg(feature = "python")]
 use crate::{
-    python::compute_py::*, python::geo_py::*, python::geo_vulkan_py::*, python::stl_py::*,
+    python::compute_py::*, python::config_py::*, python::geo_py::*, python::geo_vulkan_py::*,
+    python::stl_py::*,
 };
 
 #[cfg(feature = "python")]
@@ -20,5 +22,6 @@ fn printer_geo(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pymodule!(stl))?;
     m.add_wrapped(wrap_pymodule!(geo))?;
     m.add_wrapped(wrap_pymodule!(geo_vulkan))?;
+    m.add_wrapped(wrap_pymodule!(config))?;
     Ok(())
 }

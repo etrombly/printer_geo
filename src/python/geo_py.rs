@@ -12,8 +12,14 @@ impl From<Vec<Triangle3d>> for TrianglesPy {
 }
 
 #[pyclass]
+#[derive(Clone)]
 pub struct Line3dPy {
     pub(crate) inner: Line3d,
+}
+
+#[pymethods]
+impl Line3dPy {
+    pub fn max_x(&self) -> f32 { self.inner.p2[0] }
 }
 
 #[pymodule]

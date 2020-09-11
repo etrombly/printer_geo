@@ -2,8 +2,12 @@
 //!
 //! Conversions of geo types to be compatible with vulkan
 
-use crate::geo::*;
+use crate::{
+    compute::{intersect_tris, Vk},
+    geo::*,
+};
 use float_cmp::approx_eq;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::{Ordering, PartialEq},
@@ -11,6 +15,8 @@ use std::{
     fmt,
     ops::{Add, Index},
 };
+
+pub type PointsVk = Vec<PointVk>;
 
 #[repr(C)]
 #[derive(Default, Serialize, Deserialize, Copy, Clone)]
@@ -344,4 +350,156 @@ impl Tool {
         points.dedup();
         points
     }
+}
+
+pub fn generate_grid(bounds: &Line3d, scale: &f32) -> Vec<PointsVk> {
+    let max_x = (bounds.p2.x * scale) as i32;
+    let min_x = (bounds.p1.x * scale) as i32;
+    let max_y = (bounds.p2.y * scale) as i32;
+    let min_y = (bounds.p1.y * scale) as i32;
+    (min_x..=max_x)
+        .map(|x| {
+            (min_y..=max_y)
+                .map(move |y| PointVk::new(x as f32 / scale, y as f32 / scale, bounds.p1.z))
+                .collect::<Vec<_>>()
+        })
+        .collect()
+}
+
+pub fn generate_columns(
+    grid: &[PointsVk],
+    bounds: &Line3d,
+    resolution: &f32,
+    scale: &f32,
+) -> Vec<LineVk> {
+    let max_y = (bounds.p2.y * scale) as i32;
+    let min_y = (bounds.p1.y * scale) as i32;
+    grid.iter()
+        .map(|x| {
+            // bounding box for this column
+            LineVk {
+                p1: PointVk::new(x[0][0] - resolution, min_y as f32 / scale, 0.),
+                p2: PointVk::new(x[0][0] + resolution, max_y as f32 / scale, 0.),
+            }
+        })
+        .collect()
+}
+
+pub fn generate_heightmap(grid: &[PointsVk], partition: &[TrianglesVk], vk: &Vk) -> Vec<PointsVk> {
+    grid.iter()
+        .enumerate()
+        .map(|(column, test)| {
+            // ray cast on the GPU to figure out the highest point for each point in this
+            // column
+            intersect_tris(&partition[column], &test, &vk).unwrap()
+        })
+        .collect()
+}
+
+pub fn generate_toolpath(
+    heightmap: &[PointsVk],
+    bounds: &Line3d,
+    tool: &Tool,
+    radius: &f32,
+    stepover: &f32,
+    scale: &f32,
+) -> Vec<PointsVk> {
+    let columns = heightmap.len();
+    let rows = heightmap[0].len();
+    ((radius * scale) as usize..columns)
+.into_par_iter()
+// space each column based on radius and stepover
+.step_by((radius * stepover * scale).ceil() as usize)
+.enumerate()
+.map(|(column_num, x)| {
+    // alternate direction for each column, have to collect into a vec to get types to match
+    let steps = if column_num % 2 == 0 {
+        ((radius * scale) as usize..rows).collect::<Vec<_>>().into_par_iter()
+    } else {
+        ((radius * scale) as usize..rows).rev().collect::<Vec<_>>().into_par_iter()
+    };
+    steps
+        .map(|y| {
+            let max = tool
+                .points
+                .iter()
+                .map(|tpoint| {
+                    // for each point in the tool adjust it's location to the height map and calculate the intersection
+                    let x_offset = (x as f32 + (tpoint[0] * scale)).round() as i32;
+                    let y_offset = (y as f32 + (tpoint[1] * scale)).round() as i32;
+                    if x_offset < columns as i32
+                        && x_offset >= 0
+                        && y_offset < rows as i32
+                        && y_offset >= 0
+                    {
+
+                        heightmap[x_offset as usize][y_offset as usize][2]
+                            - tpoint[2]
+                    } else {
+                        bounds.p1.z
+                    }
+                })
+                .fold(f32::NAN, f32::max); // same as calling max on all the values for this tool to find the heighest
+            PointVk::new(x as f32 / scale, y as f32 / scale, max)
+        })
+        .collect()
+})
+.collect()
+}
+
+pub fn generate_layers(
+    toolpath: &[PointsVk],
+    bounds: &Line3d,
+    stepdown: &f32,
+) -> Vec<Vec<PointsVk>> {
+    let steps = ((bounds.p2.z - bounds.p1.z) / stepdown) as u64;
+    (1..steps + 1)
+        .map(|step| {
+            toolpath
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .map(|x| match step as f32 * -stepdown {
+                            z if z > x[2] => PointVk::new(x[0], x[1], z),
+                            _ => *x,
+                        })
+                        .collect()
+                })
+                .collect()
+        })
+        .collect()
+}
+
+pub fn generate_gcode(layers: &[Vec<PointsVk>], bounds: &Line3d) -> String {
+    let mut last = layers[0][0][0];
+    let mut output = format!("G1 Z{:.2} F300\n", bounds.p2.z);
+
+    for layer in layers {
+        output.push_str(&format!(
+            "G0 X{:.2} Y{:.2}\nG0 Z{:.2}\n",
+            layer[0][0][0], layer[0][0][1], layer[0][0][2]
+        ));
+        for row in layer {
+            output.push_str(&format!(
+                "G0 X{:.2} Y{:.2}\nG0 Z{:.2}\n",
+                row[0][0], row[0][1], row[0][2]
+            ));
+            for point in row {
+                if !approx_eq!(f32, last[0], point[0], ulps = 2)
+                    || !approx_eq!(f32, last[2], point[2], ulps = 2)
+                {
+                    output.push_str(&format!(
+                        "G1 X{:.2} Y{:.3} Z{:.2}\n",
+                        point[0], point[1], point[2]
+                    ));
+                }
+                last = *point;
+            }
+            output.push_str(&format!(
+                "G1 X{:?} Y{:?} Z{:?}\nG0 Z{:.2}\n",
+                last[0], last[1], last[2], bounds.p2.z
+            ));
+        }
+    }
+    output
 }

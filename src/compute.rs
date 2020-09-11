@@ -183,7 +183,6 @@ impl Vk {
 /// * `tris` - Model to calculate intersections
 /// * `points` - List of points to intersect
 /// * `vk` - Vulkan instance
-///
 pub fn intersect_tris(
     tris: &[TriangleVk],
     points: &[PointVk],
@@ -213,12 +212,8 @@ pub fn intersect_tris(
 
     // copy points into dest buffer, used for input and output because
     // the length and type of inputs and outputs are the same
-    let dest = CpuAccessibleBuffer::from_iter(
-        vk.device.clone(),
-        usage,
-        false,
-        points.iter().copied(),
-    )?;
+    let dest =
+        CpuAccessibleBuffer::from_iter(vk.device.clone(), usage, false, points.iter().copied())?;
 
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
@@ -228,7 +223,8 @@ pub fn intersect_tris(
     );
     let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
 
-    // using 32 as local workgroup size. Most documentation says to set it to 64, but it ran slower that way
+    // using 32 as local workgroup size. Most documentation says to set it to 64,
+    // but it ran slower that way
     builder.dispatch(
         [
             (tris.len() as u32 / 32) + 1,
@@ -254,7 +250,6 @@ pub fn intersect_tris(
 /// * `tris` - List of triangles to partition
 /// * `columns` - List of bounding boxes to partition with
 /// * `vk` - Vulkan instance
-///
 pub fn partition_tris(
     tris: &[TriangleVk],
     columns: &[LineVk],
@@ -287,12 +282,13 @@ pub fn partition_tris(
 
     columns_future.then_signal_fence_and_flush()?.wait(None)?;
 
-    // booleans in glsl are 32 bits, so using a bitmask here to hold what columns each triangle
-    // is partitioned into instead. We can pack 32 bools into a u32, and need one set of columns per tri
+    // booleans in glsl are 32 bits, so using a bitmask here to hold what columns
+    // each triangle is partitioned into instead. We can pack 32 bools into a
+    // u32, and need one set of columns per tri
     let count = ((tris.len() as f32 - 1.) + ((columns.len() as f32 - 1.) * tris.len() as f32) / 32.)
         .ceil() as usize;
-    // save some time by not initializing the vec, wasn't sure if this would be a problem setting up the buffer
-    // but it seems to be working well
+    // save some time by not initializing the vec, wasn't sure if this would be a
+    // problem setting up the buffer but it seems to be working well
     let mut dest_content: Vec<u32> = Vec::with_capacity(count);
     unsafe {
         dest_content.set_len(count);
@@ -313,7 +309,8 @@ pub fn partition_tris(
             .build()?,
     );
     let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
-    // using 32 as local workgroup size. Most documentation says to set it to 64, but it ran slower that way
+    // using 32 as local workgroup size. Most documentation says to set it to 64,
+    // but it ran slower that way
     builder.dispatch(
         [
             (tris.len() as u32 / 32) + 1,

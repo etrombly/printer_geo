@@ -51,7 +51,8 @@ impl Line3d {
     /// assert!(line.on_line_2d(&point));
     /// ```
     pub fn on_line_2d(&self, point: &Point3d) -> bool {
-        (distance(&self.p1.xy(), &point.xy()) + distance(&self.p2.xy(), &point.xy())) - distance(&self.p1.xy(), &self.p2.xy())
+        (distance(&self.p1.xy(), &point.xy()) + distance(&self.p2.xy(), &point.xy()))
+            - distance(&self.p1.xy(), &self.p2.xy())
             < PRECISION
     }
 
@@ -192,7 +193,7 @@ impl Triangle3d {
         }
     }
 
-    /// Check if triangle is within bounding box, 
+    /// Check if triangle is within bounding box,
     /// ignoring Z axis
     ///
     /// # Examples
@@ -204,14 +205,35 @@ impl Triangle3d {
     /// assert!(tri.in_2d_bounds(&bounds));
     /// ```
     pub fn in_2d_bounds(&self, bbox: &Line3d) -> bool {
-        let left = Line3d{p1: bbox.p1, p2: Point3d::new(bbox.p1[0], bbox.p2[1], bbox.p1[2])};
-        let right = Line3d{p1: bbox.p2, p2: Point3d::new(bbox.p2[0], bbox.p1[1], bbox.p2[2])};
-        let line1 = Line3d{p1: self.p1, p2: self.p2};
-        let line2 = Line3d{p1: self.p2, p2: self.p3};
-        let line3 = Line3d{p1: self.p1, p2: self.p3};
-        bbox.in_2d_bounds(&self.p1) || bbox.in_2d_bounds(&self.p2) || bbox.in_2d_bounds(&self.p3) ||
-    left.intersect_2d(&line1) || left.intersect_2d(&line2) || left.intersect_2d(&line3) || 
-    right.intersect_2d(&line1) || right.intersect_2d(&line2) || right.intersect_2d(&line3)
+        let left = Line3d {
+            p1: bbox.p1,
+            p2: Point3d::new(bbox.p1[0], bbox.p2[1], bbox.p1[2]),
+        };
+        let right = Line3d {
+            p1: bbox.p2,
+            p2: Point3d::new(bbox.p2[0], bbox.p1[1], bbox.p2[2]),
+        };
+        let line1 = Line3d {
+            p1: self.p1,
+            p2: self.p2,
+        };
+        let line2 = Line3d {
+            p1: self.p2,
+            p2: self.p3,
+        };
+        let line3 = Line3d {
+            p1: self.p1,
+            p2: self.p3,
+        };
+        bbox.in_2d_bounds(&self.p1)
+            || bbox.in_2d_bounds(&self.p2)
+            || bbox.in_2d_bounds(&self.p3)
+            || left.intersect_2d(&line1)
+            || left.intersect_2d(&line2)
+            || left.intersect_2d(&line3)
+            || right.intersect_2d(&line1)
+            || right.intersect_2d(&line2)
+            || right.intersect_2d(&line3)
     }
 
     /// Move triangle
@@ -328,7 +350,7 @@ pub struct Circle {
 impl Circle {
     pub fn new(center: Point3d, radius: f32) -> Circle { Circle { center, radius } }
 
-    /// Check if point is in circle, 
+    /// Check if point is in circle,
     /// ignoring Z axis
     ///
     /// # Examples

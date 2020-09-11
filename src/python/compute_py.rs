@@ -6,7 +6,7 @@ use pyo3::{exceptions::TypeError, prelude::*};
 
 #[pyclass]
 pub struct VkPy {
-    inner: Vk,
+    pub(crate) inner: Vk,
 }
 
 impl From<Vk> for VkPy {

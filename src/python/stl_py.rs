@@ -3,8 +3,8 @@ use pyo3::prelude::*;
 
 #[pymodule]
 pub fn stl(_py: Python, m: &PyModule) -> PyResult<()> {
-    #[pyfn(m, "load_stl")]
-    fn load_stl_py(_py: Python, filename: &str) -> PyResult<TrianglesPy> {
+    #[pyfn(m, "stl_to_tri")]
+    fn stl_to_tri_py(_py: Python, filename: &str) -> PyResult<TrianglesPy> {
         let triangles = stl_to_tri(filename)?;
         Ok(triangles.into())
     }
