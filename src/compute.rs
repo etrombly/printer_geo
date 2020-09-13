@@ -3,6 +3,8 @@
 //! Module for running compute shaders on vulkan
 
 pub use crate::geo_vulkan::*;
+#[cfg_attr(feature = "with_pyo3", pyclass)]
+use pyo3::prelude::*;
 use std::sync::Arc;
 use thiserror::Error;
 use vulkano::{
@@ -61,6 +63,7 @@ pub enum ComputeError {
 }
 
 /// Holds vulkan device and queue
+#[cfg_attr(feature = "python", pyclass)]
 pub struct Vk {
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,

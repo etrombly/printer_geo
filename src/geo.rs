@@ -4,6 +4,8 @@
 //! mostly wraps Nalgebra types with some additional functionality
 
 use nalgebra::{distance, zero, Isometry3, Point3, Vector3};
+#[cfg_attr(feature = "with_pyo3", pyclass)]
+use pyo3::prelude::*;
 use rayon::prelude::*;
 use std::{cmp::Ordering, ops::Add};
 
@@ -24,6 +26,7 @@ pub trait Intersect<RHS = Self> {
     fn intersect(self, rhs: RHS) -> Self::Output;
 }
 
+#[cfg_attr(feature = "python", pyclass)]
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub struct Line3d {
     pub p1: Point3d,
@@ -175,6 +178,7 @@ impl PartialOrd for Line3d {
     }
 }
 
+#[cfg_attr(feature = "python", pyclass)]
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub struct Triangle3d {
     pub p1: Point3d,

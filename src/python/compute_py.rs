@@ -1,17 +1,8 @@
 use crate::{
     compute::{intersect_tris, partition_tris, ComputeError, Vk, VkError},
-    python::geo_vulkan_py::{LinesVkPy, PointsVkPy, TrianglesVkPy},
+    geo_vulkan::{LineVk, PointVk, PointsVk, TriangleVk, TrianglesVk},
 };
 use pyo3::{exceptions::TypeError, prelude::*};
-
-#[pyclass]
-pub struct VkPy {
-    pub(crate) inner: Vk,
-}
-
-impl From<Vk> for VkPy {
-    fn from(vk: Vk) -> Self { VkPy { inner: vk } }
-}
 
 impl From<VkError> for PyErr {
     fn from(err: VkError) -> Self { PyErr::new::<TypeError, _>(err.to_string()) }
@@ -24,32 +15,26 @@ impl From<ComputeError> for PyErr {
 #[pymodule]
 pub fn compute(_py: Python, m: &PyModule) -> PyResult<()> {
     #[pyfn(m, "init_vk")]
-    fn init_vk_py(_py: Python) -> PyResult<VkPy> {
-        let vk = Vk::new()?;
-        Ok(vk.into())
-    }
+    fn init_vk_py(_py: Python) -> PyResult<Vk> { Ok(Vk::new()?) }
 
     #[pyfn(m, "intersect_tris")]
     fn intersect_tris_py(
         _py: Python,
-        tris: &TrianglesVkPy,
-        points: &PointsVkPy,
-        vk: &VkPy,
-    ) -> PyResult<PointsVkPy> {
-        let result = intersect_tris(&tris.inner, &points.inner, &vk.inner)?;
-        Ok(result.into())
+        tris: Vec<TriangleVk>,
+        points: Vec<PointVk>,
+        vk: &Vk,
+    ) -> PyResult<PointsVk> {
+        Ok(intersect_tris(&tris, &points, &vk)?)
     }
 
     #[pyfn(m, "partition_tris")]
     fn partition_tris_py(
         _py: Python,
-        tris: &TrianglesVkPy,
-        columns: &LinesVkPy,
-        vk: &VkPy,
-    ) -> PyResult<Vec<TrianglesVkPy>> {
-        let result = partition_tris(&tris.inner, &columns.inner, &vk.inner)?;
-        let result: Vec<TrianglesVkPy> = result.into_iter().map(|x| x.into()).collect();
-        Ok(result)
+        tris: Vec<TriangleVk>,
+        columns: Vec<LineVk>,
+        vk: &Vk,
+    ) -> PyResult<Vec<TrianglesVk>> {
+        Ok(partition_tris(&tris, &columns, vk)?)
     }
 
     Ok(())

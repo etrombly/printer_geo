@@ -7,6 +7,8 @@ use crate::{
     geo::*,
 };
 use float_cmp::approx_eq;
+#[cfg_attr(feature = "with_pyo3", pyclass)]
+use pyo3::prelude::*;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -18,6 +20,7 @@ use std::{
 
 pub type PointsVk = Vec<PointVk>;
 
+#[cfg_attr(feature = "python", pyclass)]
 #[repr(C)]
 #[derive(Default, Serialize, Deserialize, Copy, Clone)]
 pub struct PointVk {
@@ -118,6 +121,7 @@ impl Sub<PointVk> for PointVk {
     }
 }
 
+#[cfg_attr(feature = "python", pyclass)]
 #[derive(Default, Debug, Copy, Clone)]
 pub struct TriangleVk {
     pub p1: PointVk,
@@ -233,6 +237,7 @@ pub fn to_tri_vk(tris: &[Triangle3d]) -> Vec<TriangleVk> {
     tris.iter().map(|tri| tri.into()).collect()
 }
 
+#[cfg_attr(feature = "python", pyclass)]
 #[derive(Default, Debug, Copy, Clone)]
 pub struct LineVk {
     pub p1: PointVk,
@@ -283,6 +288,7 @@ impl From<&Line3d> for LineVk {
     }
 }
 
+#[cfg_attr(feature = "python", pyclass)]
 #[derive(Clone, Copy, Debug)]
 pub struct CircleVk {
     pub center: PointVk,
@@ -325,6 +331,7 @@ impl CircleVk {
     fn max_z(self) -> f32 { self.center[2] }
 }
 
+#[cfg_attr(feature = "python", pyclass)]
 /// Tool for CAM operations, represented as a point cloud
 #[derive(Default, Clone)]
 pub struct Tool {

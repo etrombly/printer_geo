@@ -8,7 +8,7 @@ radius = 0.25
 stepover_percent = 90
 stepover = radius * 2 * (stepover_percent / 100) # will probably add some helper functions for this
 stepdown = 1 # 1mm
-tool = geo_vulkan.new_endmill(radius, scale);
+tool = geo_vulkan.new_endmill(radius, scale)
 vk = compute.init_vk()
 tris = stl.stl_to_tri("/home/eric/Projects/dropcutter/spider.stl")
 geo.move_to_zero(tris)
