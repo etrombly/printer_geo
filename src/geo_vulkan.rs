@@ -13,7 +13,7 @@ use std::{
     cmp::{Ordering, PartialEq},
     default::Default,
     fmt,
-    ops::{Add, Index},
+    ops::{Add, Index, Sub},
 };
 
 pub type PointsVk = Vec<PointVk>;
@@ -29,6 +29,18 @@ impl PointVk {
         PointVk {
             position: [x, y, z],
         }
+    }
+
+    pub fn cross(&self, other: &PointVk) -> PointVk {
+        PointVk::new(
+            self[1] * other[2] - self[2] * other[1],
+            self[2] * other[0] - self[0] * other[2],
+            self[0] * other[1] - self[1] * other[0],
+        )
+    }
+
+    pub fn dot(&self, other: &PointVk) -> f32 {
+        self[0] * other[0] + self[1] * other[1] + self[2] * other[2]
     }
 }
 
@@ -96,6 +108,16 @@ impl Add<PointVk> for PointVk {
     }
 }
 
+impl Sub<PointVk> for PointVk {
+    type Output = PointVk;
+
+    fn sub(self, other: PointVk) -> PointVk {
+        PointVk {
+            position: [self[0] - other[0], self[1] - other[1], self[2] - other[2]],
+        }
+    }
+}
+
 #[derive(Default, Debug, Copy, Clone)]
 pub struct TriangleVk {
     pub p1: PointVk,
@@ -116,6 +138,36 @@ impl TriangleVk {
 
     pub fn in_2d_bounds(&self, bbox: &LineVk) -> bool {
         bbox.in_2d_bounds(&self.p1) || bbox.in_2d_bounds(&self.p2) || bbox.in_2d_bounds(&self.p3)
+    }
+
+    pub fn intersect_ray(&self, O: &PointVk) -> Option<f32> {
+        let EPSILON = 0.001;
+        // hard code the direction as casting up
+        let D = PointVk::new(0., 0., 1.);
+        // standard ray/triangle intersection, modified from a stackoverflow question
+        let e1 = self.p2 - self.p1;
+        let e2 = self.p3 - self.p1;
+        let P = D.cross(&e2);
+        let det = e1.dot(&P);
+        if det > -EPSILON && det < EPSILON {
+            return None;
+        }
+        let inv_det = 1.0 / det;
+        let T = *O - self.p1;
+        let u = T.dot(&P) * inv_det;
+        if u < 0. || u > 1. {
+            return None;
+        }
+        let Q = T.cross(&e1);
+        let v = D.dot(&Q) * inv_det;
+        if v < 0. || u + v > 1. {
+            return None;
+        }
+        let t = e2.dot(&Q) * inv_det;
+        if t > EPSILON {
+            return Some(O[2] + t * D[2]);
+        }
+        return None;
     }
 
     pub fn filter_row(&self, bound: LineVk) -> bool {
@@ -385,6 +437,26 @@ pub fn generate_columns(
         .collect()
 }
 
+pub fn generate_columns_chunks(
+    grid: &[PointsVk],
+    bounds: &Line3d,
+    resolution: &f32,
+    scale: &f32,
+) -> Vec<LineVk> {
+    let max_y = (bounds.p2.y * scale) as i32;
+    let min_y = (bounds.p1.y * scale) as i32;
+    grid.chunks(10)
+        .map(|x| {
+            let last = x.len() - 1;
+            // bounding box for this column
+            LineVk {
+                p1: PointVk::new(x[0][0][0] - resolution, min_y as f32 / scale, 0.),
+                p2: PointVk::new(x[last][0][0] + resolution, max_y as f32 / scale, 0.),
+            }
+        })
+        .collect()
+}
+
 pub fn generate_heightmap(grid: &[PointsVk], partition: &[TrianglesVk], vk: &Vk) -> Vec<PointsVk> {
     grid.iter()
         .enumerate()
@@ -502,4 +574,19 @@ pub fn generate_gcode(layers: &[Vec<PointsVk>], bounds: &Line3d) -> String {
         }
     }
     output
+}
+
+pub fn intersect_tris_fallback(tris: &[TriangleVk], points: &[PointVk]) -> Vec<PointVk> {
+    points
+        .par_iter()
+        .map(|point| {
+            PointVk::new(
+                point[0],
+                point[1],
+                tris.iter()
+                    .filter_map(|tri| tri.intersect_ray(&point))
+                    .fold(f32::NAN, f32::max),
+            )
+        })
+        .collect()
 }
