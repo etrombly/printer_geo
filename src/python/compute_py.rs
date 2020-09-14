@@ -1,6 +1,6 @@
 use crate::{
     compute::{intersect_tris, partition_tris, ComputeError, Vk, VkError},
-    geo_vulkan::{LineVk, PointVk, PointsVk, TriangleVk, TrianglesVk},
+    geo::*,
 };
 use pyo3::{exceptions::PyException, prelude::*};
 
@@ -20,20 +20,20 @@ pub fn compute(_py: Python, m: &PyModule) -> PyResult<()> {
     #[pyfn(m, "intersect_tris")]
     fn intersect_tris_py(
         _py: Python,
-        tris: Vec<TriangleVk>,
-        points: Vec<PointVk>,
+        tris: Vec<Triangle3d>,
+        points: Vec<Point3d>,
         vk: &Vk,
-    ) -> PyResult<PointsVk> {
+    ) -> PyResult<Vec<Point3d>> {
         Ok(intersect_tris(&tris, &points, &vk)?)
     }
 
     #[pyfn(m, "partition_tris")]
     fn partition_tris_py(
         _py: Python,
-        tris: Vec<TriangleVk>,
-        columns: Vec<LineVk>,
+        tris: Vec<Triangle3d>,
+        columns: Vec<Line3d>,
         vk: &Vk,
-    ) -> PyResult<Vec<TrianglesVk>> {
+    ) -> PyResult<Vec<Vec<Triangle3d>>> {
         Ok(partition_tris(&tris, &columns, vk)?)
     }
 
