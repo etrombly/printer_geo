@@ -15,7 +15,7 @@ use crate::{
 #[cfg_attr(feature = "python", pyclass)]
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Point3d {
-    pos: Vec3,
+    pub pos: Vec3,
 }
 
 impl Point3d {
