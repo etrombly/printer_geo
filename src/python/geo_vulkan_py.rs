@@ -2,7 +2,7 @@ use crate::{
     compute::Vk,
     geo::{Line3d, Triangle3d},
     geo_vulkan::{
-        generate_columns, generate_gcode, generate_grid, generate_heightmap, generate_layers,
+        generate_columns, generate_columns_chunks,generate_gcode, generate_grid, generate_heightmap, generate_heightmap_chunks,generate_layers,
         generate_toolpath, to_tri_vk, LineVk, PointVk, PointsVk, Tool, TriangleVk, TrianglesVk,
     },
 };
@@ -29,6 +29,17 @@ pub fn geo_vulkan(_py: Python, m: &PyModule) -> PyResult<()> {
         generate_columns(&grid, bounds, &resolution, &scale)
     }
 
+    #[pyfn(m, "generate_columns_chunks")]
+    fn generate_columns_chunks_py(
+        _py: Python,
+        grid: Vec<PointsVk>,
+        bounds: &Line3d,
+        resolution: f32,
+        scale: f32,
+    ) -> Vec<LineVk> {
+        generate_columns_chunks(&grid, bounds, &resolution, &scale)
+    }
+
     #[pyfn(m, "generate_heightmap")]
     pub fn generate_heightmap_py(
         _py: Python,
@@ -37,6 +48,16 @@ pub fn geo_vulkan(_py: Python, m: &PyModule) -> PyResult<()> {
         vk: &Vk,
     ) -> Vec<PointsVk> {
         generate_heightmap(&grid, &partition, vk)
+    }
+
+    #[pyfn(m, "generate_heightmap_chunks")]
+    pub fn generate_heightmap_chunks_py(
+        _py: Python,
+        grid: Vec<PointsVk>,
+        partition: Vec<TrianglesVk>,
+        vk: &Vk,
+    ) -> Vec<PointsVk> {
+        generate_heightmap_chunks(&grid, &partition, vk)
     }
 
     #[pyfn(m, "generate_toolpath")]

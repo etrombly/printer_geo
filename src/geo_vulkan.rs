@@ -475,6 +475,30 @@ pub fn generate_heightmap(grid: &[PointsVk], partition: &[TrianglesVk], vk: &Vk)
         .collect()
 }
 
+pub fn generate_heightmap_chunks(
+    grid: &[Vec<PointVk>],
+    partition: &[Vec<TriangleVk>],
+    vk: &Vk,
+) -> Vec<Vec<PointVk>> {
+    let mut result = Vec::with_capacity(grid.len());
+    for (column, test) in grid.chunks(10).enumerate() {
+        // ray cast on the GPU to figure out the highest point for each point in this
+        // column
+        // TODO: there's probably a better way to process this in chunks
+        let len = test[0].len();
+        let tris = intersect_tris(
+            &partition[column],
+            &test.iter().flat_map(|x| x).copied().collect::<Vec<_>>(),
+            &vk,
+        )
+        .unwrap();
+        for chunk in tris.chunks(len) {
+            result.push(chunk.to_vec());
+        }
+    }
+    result
+}
+
 pub fn generate_toolpath(
     heightmap: &[PointsVk],
     bounds: &Line3d,
