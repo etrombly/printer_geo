@@ -11,9 +11,10 @@ use std::{cmp::{Ordering, PartialEq}, ops::Add, ops::Sub, ops::Mul};
 use float_cmp::approx_eq;
 use crate::{
     compute::{intersect_tris, Vk},};
+    use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "python", pyclass)]
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default,Serialize, Deserialize)]
 pub struct Point3d {
     pub pos: Vec3,
 }

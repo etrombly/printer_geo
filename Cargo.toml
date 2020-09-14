@@ -23,7 +23,10 @@ thiserror = "1.0.20"
 float-cmp = "0.8.0"
 structopt = "0.3.17"
 clap = "2.33.3"
-ultraviolet = "0.6.1"
+
+[dependencies.ultraviolet]
+version = "0.6.1"
+features = ["serde"]
 
 [dependencies.serde]
 version = "1.0.116"
