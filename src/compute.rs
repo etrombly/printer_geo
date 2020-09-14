@@ -2,8 +2,8 @@
 //!
 //! Module for running compute shaders on vulkan
 
-pub use crate::geo_vulkan::*;
-#[cfg_attr(feature = "with_pyo3", pyclass)]
+pub use crate::geo::*;
+#[cfg(feature = "python")]
 use pyo3::prelude::*;
 use std::sync::Arc;
 use thiserror::Error;
@@ -187,10 +187,10 @@ impl Vk {
 /// * `points` - List of points to intersect
 /// * `vk` - Vulkan instance
 pub fn intersect_tris(
-    tris: &[TriangleVk],
-    points: &[PointVk],
+    tris: &[Triangle3d],
+    points: &[Point3d],
     vk: &Vk,
-) -> Result<Vec<PointVk>, ComputeError> {
+) -> Result<Vec<Point3d>, ComputeError> {
     // load compute shader
     let shader = drop::Shader::load(vk.device.clone())?;
     let compute_pipeline = Arc::new(ComputePipeline::new(
@@ -254,10 +254,10 @@ pub fn intersect_tris(
 /// * `columns` - List of bounding boxes to partition with
 /// * `vk` - Vulkan instance
 pub fn partition_tris(
-    tris: &[TriangleVk],
-    columns: &[LineVk],
+    tris: &[Triangle3d],
+    columns: &[Line3d],
     vk: &Vk,
-) -> Result<Vec<Vec<TriangleVk>>, ComputeError> {
+) -> Result<Vec<Vec<Triangle3d>>, ComputeError> {
     // load compute shader
     let shader = partition::Shader::load(vk.device.clone())?;
     let compute_pipeline = Arc::new(ComputePipeline::new(

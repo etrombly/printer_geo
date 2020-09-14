@@ -1,5 +1,5 @@
 use crate::config::*;
-use pyo3::{exceptions::TypeError, prelude::*};
+use pyo3::{exceptions::PyException, prelude::*};
 use structopt::StructOpt;
 
 #[pyclass]
@@ -12,7 +12,7 @@ impl From<Opt> for OptPy {
 }
 
 impl From<ConfigError> for PyErr {
-    fn from(err: ConfigError) -> Self { PyErr::new::<TypeError, _>(err.to_string()) }
+    fn from(err: ConfigError) -> Self { PyException::new_err(err.to_string()) }
 }
 
 #[pymodule]

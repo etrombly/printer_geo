@@ -2,11 +2,20 @@ use crate::{
     compute::Vk,
     geo::{Line3d, Triangle3d},
     geo_vulkan::{
-        generate_columns, generate_columns_chunks,generate_gcode, generate_grid, generate_heightmap, generate_heightmap_chunks,generate_layers,
-        generate_toolpath, to_tri_vk, LineVk, PointVk, PointsVk, Tool, TriangleVk, TrianglesVk,
+        generate_columns, generate_columns_chunks, generate_gcode, generate_grid,
+        generate_heightmap, generate_heightmap_chunks, generate_layers, generate_toolpath,
+        to_tri_vk, LineVk, PointVk, PointsVk, Tool, TriangleVk, TrianglesVk,
     },
 };
 use pyo3::prelude::*;
+
+#[pymethods]
+impl PointVk {
+    #[getter]
+    fn position(&self) -> PyResult<[f32;3]> {
+        Ok(self.position)
+    }
+}
 
 #[pymodule]
 pub fn geo_vulkan(_py: Python, m: &PyModule) -> PyResult<()> {
