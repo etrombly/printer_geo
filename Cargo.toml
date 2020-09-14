@@ -23,13 +23,14 @@ thiserror = "1.0.20"
 float-cmp = "0.8.0"
 structopt = "0.3.17"
 clap = "2.33.3"
+ultraviolet = "0.6.1"
 
 [dependencies.serde]
-version = "1.0.115"
+version = "1.0.116"
 features =["derive"]
 
 [dependencies.pyo3]
-version = "0.11.1"
+version = "0.12.0"
 features = ["extension-module", "nightly"]
 optional = true
 

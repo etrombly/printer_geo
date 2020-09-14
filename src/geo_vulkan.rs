@@ -7,7 +7,7 @@ use crate::{
     geo::*,
 };
 use float_cmp::approx_eq;
-#[cfg_attr(feature = "with_pyo3", pyclass)]
+#[cfg(feature = "python")]
 use pyo3::prelude::*;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -144,32 +144,32 @@ impl TriangleVk {
         bbox.in_2d_bounds(&self.p1) || bbox.in_2d_bounds(&self.p2) || bbox.in_2d_bounds(&self.p3)
     }
 
-    pub fn intersect_ray(&self, O: &PointVk) -> Option<f32> {
-        let EPSILON = 0.001;
+    pub fn intersect_ray(&self, origin: &PointVk) -> Option<f32> {
+        const EPSILON: f32 = 0.001;
         // hard code the direction as casting up
-        let D = PointVk::new(0., 0., 1.);
+        let ray = PointVk::new(0., 0., 1.);
         // standard ray/triangle intersection, modified from a stackoverflow question
         let e1 = self.p2 - self.p1;
         let e2 = self.p3 - self.p1;
-        let P = D.cross(&e2);
-        let det = e1.dot(&P);
+        let p = ray.cross(&e2);
+        let det = e1.dot(&p);
         if det > -EPSILON && det < EPSILON {
             return None;
         }
         let inv_det = 1.0 / det;
-        let T = *O - self.p1;
-        let u = T.dot(&P) * inv_det;
+        let t = *origin - self.p1;
+        let u = t.dot(&p) * inv_det;
         if u < 0. || u > 1. {
             return None;
         }
-        let Q = T.cross(&e1);
-        let v = D.dot(&Q) * inv_det;
+        let q = t.cross(&e1);
+        let v = ray.dot(&q) * inv_det;
         if v < 0. || u + v > 1. {
             return None;
         }
-        let t = e2.dot(&Q) * inv_det;
+        let t = e2.dot(&q) * inv_det;
         if t > EPSILON {
-            return Some(O[2] + t * D[2]);
+            return Some(origin[2] + t * ray[2]);
         }
         return None;
     }

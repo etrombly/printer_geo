@@ -2,14 +2,14 @@ use crate::{
     compute::{intersect_tris, partition_tris, ComputeError, Vk, VkError},
     geo_vulkan::{LineVk, PointVk, PointsVk, TriangleVk, TrianglesVk},
 };
-use pyo3::{exceptions::TypeError, prelude::*};
+use pyo3::{exceptions::PyException, prelude::*};
 
 impl From<VkError> for PyErr {
-    fn from(err: VkError) -> Self { PyErr::new::<TypeError, _>(err.to_string()) }
+    fn from(err: VkError) -> Self { PyException::new_err(err.to_string()) }
 }
 
 impl From<ComputeError> for PyErr {
-    fn from(err: ComputeError) -> Self { PyErr::new::<TypeError, _>(err.to_string()) }
+    fn from(err: ComputeError) -> Self { PyException::new_err(err.to_string()) }
 }
 
 #[pymodule]
