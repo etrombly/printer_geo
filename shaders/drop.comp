@@ -1,5 +1,5 @@
 #version 450
-#define EPSILON 0.001
+#define EPSILON 0.0000001
 
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
@@ -33,6 +33,7 @@ layout(std430, set = 0, binding = 1) coherent buffer Points {
 
 bool ray_tri_intersect(in vec3 O, in vec3 p1, in vec3 p2, in vec3 p3, out float hit) {
     // hard code the direction as casting up
+    // TODO: since the direction is always the same precompute up until inv_det
     vec3 D = vec3(0,0,1);
     // standard ray/triangle intersection, modified from a stackoverflow question
     vec3 e1 = p2 - p1; 
