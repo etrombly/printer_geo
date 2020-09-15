@@ -19,6 +19,9 @@ use vulkano::{
     pipeline::ComputePipeline,
     sync::GpuFuture,
 };
+use std::time::Instant;
+use vulkano::descriptor::pipeline_layout::PipelineLayout;
+
 
 #[derive(Error, Debug)]
 /// Error types for vulkan devices
@@ -31,6 +34,10 @@ pub enum VkError {
     Graphics,
     #[error("Could not create vulkan device")]
     Device(#[from] vulkano::device::DeviceCreationError),
+    #[error("Failed to create compute shader")]
+    Shader(#[from] vulkano::OomError),
+    #[error("Failed to create compute pipeline")]
+    Pipeline(#[from] vulkano::pipeline::ComputePipelineCreationError),
     #[error("No queue available for vulkan device")]
     Queue,
 }
@@ -68,6 +75,7 @@ pub struct Vk {
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
     pub debug_callback: Option<DebugCallback>,
+    cp: Arc<ComputePipeline<PipelineLayout<drop::Layout>>>
 }
 
 impl Vk {
@@ -93,11 +101,18 @@ impl Vk {
             )?
         };
         let queue = queues.next().ok_or_else(|| VkError::Queue)?;
+        let shader = drop::Shader::load(device.clone())?;
+        let cp = Arc::new(ComputePipeline::new(
+            device.clone(),
+            &shader.main_entry_point(),
+            &(),
+        )?);
 
         Ok(Vk {
             device,
             queue,
             debug_callback: None,
+            cp,
         })
     }
 
@@ -170,11 +185,19 @@ impl Vk {
             )?
         };
         let queue = queues.next().ok_or_else(|| VkError::Queue)?;
+        let queue = queues.next().ok_or_else(|| VkError::Queue)?;
+        let shader = drop::Shader::load(device.clone())?;
+        let cp = Arc::new(ComputePipeline::new(
+            device.clone(),
+            &shader.main_entry_point(),
+            &(),
+        )?);
 
         Ok(Vk {
             device,
             queue,
             debug_callback,
+            cp,
         })
     }
 }
@@ -192,13 +215,7 @@ pub fn intersect_tris(
     vk: &Vk,
 ) -> Result<Vec<Point3d>, ComputeError> {
     // load compute shader
-    let shader = drop::Shader::load(vk.device.clone())?;
-    let compute_pipeline = Arc::new(ComputePipeline::new(
-        vk.device.clone(),
-        &shader.main_entry_point(),
-        &(),
-    )?);
-
+    let compute_pipeline = vk.cp.clone();
     let layout = compute_pipeline
         .layout()
         .descriptor_set_layout(0)
@@ -244,6 +261,82 @@ pub fn intersect_tris(
     let dest_content = dest.read()?;
 
     Ok(dest_content.to_vec())
+}
+
+pub fn heightmap(
+    tris: &[Triangle3d],
+    vk: &Vk,
+) -> Result<Vec<f32>, ComputeError> {
+    // load compute shader
+    let shader = drop_single::Shader::load(vk.device.clone())?;
+let now = Instant::now();
+    let compute_pipeline = Arc::new(ComputePipeline::new(
+        vk.device.clone(),
+        &shader.main_entry_point(),
+        &(),
+    )?);
+println!("pipeline {:?}", now.elapsed());
+let now = Instant::now();
+    let layout = compute_pipeline
+        .layout()
+        .descriptor_set_layout(0)
+        .ok_or_else(|| ComputeError::Layout)?;
+        println!("layout {:?}", now.elapsed());
+
+    // set up ssbo buffer
+    let mut usage = BufferUsage::transfer_source();
+    usage.storage_buffer = true;
+
+let now = Instant::now();
+    // copy tris into source buffer
+    let (source, source_future) =
+        ImmutableBuffer::from_iter(tris.iter().copied(), usage, vk.queue.clone())?;
+    source_future.then_signal_fence_and_flush()?.wait(None)?;
+    println!("copy tris {:?}", now.elapsed());
+let now = Instant::now();
+    let mut dest_dummy: Vec<f32> = Vec::with_capacity(tris.len());
+    unsafe {dest_dummy.set_len(tris.len());}
+    // copy points into dest buffer, used for input and output because
+    // the length and type of inputs and outputs are the same
+    let dest =
+        CpuAccessibleBuffer::from_iter(vk.device.clone(), usage, false, dest_dummy.iter().copied())?;
+        println!("copy dest {:?}", now.elapsed());
+let now = Instant::now();
+    let set = Arc::new(
+        PersistentDescriptorSet::start(layout.clone())
+            .add_buffer(source.clone())?
+            .add_buffer(dest.clone())?
+            .build()?,
+    );
+    println!("create set {:?}", now.elapsed());
+    let now = Instant::now();
+    let mut results = Vec::new();
+    for i in 0..10000 {
+        let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
+        let i = i as f32 / 100.;
+        let push_constants = drop_single::ty::PushConstantData {
+            x: i,
+            y: i,
+        };
+    
+        builder.dispatch(
+            [
+                (tris.len() as u32 / 64) + 1,
+                1,
+                1,
+            ],
+            compute_pipeline.clone(),
+            set.clone(),
+            push_constants,
+        )?;
+        let command_buffer = builder.build()?;
+        let finished = command_buffer.execute(vk.queue.clone())?;
+        finished.then_signal_fence_and_flush()?.wait(None)?;
+        
+        let dest_content = dest.read()?;
+    }
+    println!("10000 {:?}", now.elapsed());
+    Ok(results)
 }
 
 /// Split triangles into columns they are contained in
@@ -353,6 +446,13 @@ mod drop {
     vulkano_shaders::shader! {
         ty: "compute",
         path: "shaders/drop.comp"
+    }
+}
+
+mod drop_single {
+    vulkano_shaders::shader! {
+        ty: "compute",
+        path: "shaders/drop_single.comp"
     }
 }
 
