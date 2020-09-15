@@ -1,64 +1,55 @@
 //! # Geo
 //!
 //! Collection of geometric types and functions useful for 3d models and CAM
-//! mostly wraps Nalgebra types with some additional functionality
+//! mostly wraps ultraviolet types with some additional functionality
 
-use ultraviolet::{Vec2, Vec3};
+use crate::compute::{intersect_tris, Vk};
+use float_cmp::approx_eq;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 use rayon::prelude::*;
-use std::{cmp::{Ordering, PartialEq}, ops::Add, ops::Sub, ops::Mul};
-use float_cmp::approx_eq;
-use crate::{
-    compute::{intersect_tris, Vk},};
-    use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
+use std::{
+    cmp::{Ordering, PartialEq},
+    ops::{Add, Mul, Sub},
+};
+use ultraviolet::{Vec2, Vec3};
+use std::ops::Index;
+
+const PRECISION: f32 = 0.001;
 
 #[cfg_attr(feature = "python", pyclass)]
-#[derive(Clone, Copy, Debug, Default,Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 pub struct Point3d {
     pub pos: Vec3,
 }
 
 impl Point3d {
-    pub fn new(x: f32, y:f32, z:f32) -> Point3d {
-        Point3d{pos: Vec3::new(x,y,z)}
+    pub fn new(x: f32, y: f32, z: f32) -> Point3d {
+        Point3d {
+            pos: Vec3::new(x, y, z),
+        }
     }
 
-    pub fn is_infinite(&self) -> bool {
-        is_vec3_inf(&self.pos)
-    }
+    pub fn is_infinite(&self) -> bool { is_vec3_inf(&self.pos) }
 
-    pub fn is_nan(&self) -> bool {
-        is_vec3_nan(&self.pos)
-    }
+    pub fn is_nan(&self) -> bool { is_vec3_nan(&self.pos) }
 
-    pub fn cross(&self, other: &Point3d) -> Point3d {
-        self.pos.cross(other.pos).into()
-    }
+    pub fn cross(&self, other: &Point3d) -> Point3d { self.pos.cross(other.pos).into() }
 
-    pub fn dot(&self, other: &Point3d) -> f32 {
-        self.pos.dot(other.pos)
-    }
-}
-
-pub fn distance(left: &Vec2, right: &Vec2) -> f32 {
-        ((left.x - right.x).powi(2) + (left.y - right.y).powi(2)).sqrt()
+    pub fn dot(&self, other: &Point3d) -> f32 { self.pos.dot(other.pos) }
 }
 
 impl Add<Point3d> for Point3d {
     type Output = Point3d;
 
-    fn add(self, other: Point3d) -> Point3d {
-        (self.pos + other.pos).into()
-    }
+    fn add(self, other: Point3d) -> Point3d { (self.pos + other.pos).into() }
 }
 
 impl Sub<Point3d> for Point3d {
     type Output = Point3d;
 
-    fn sub(self, other: Point3d) -> Point3d {
-        (self.pos - other.pos).into()
-    }
+    fn sub(self, other: Point3d) -> Point3d { (self.pos - other.pos).into() }
 }
 
 impl Mul<f32> for Point3d {
@@ -70,9 +61,7 @@ impl Mul<f32> for Point3d {
 }
 
 impl From<Vec3> for Point3d {
-    fn from(vec3: Vec3) -> Self {
-        Point3d{pos: vec3}
-    }
+    fn from(vec3: Vec3) -> Self { Point3d { pos: vec3 } }
 }
 
 impl Eq for Point3d {}
@@ -114,12 +103,18 @@ impl PartialOrd for Point3d {
 }
 
 /// check if any value in point is infinite
-pub fn is_vec3_inf(point: &Vec3) -> bool { point.x.is_infinite() || point.y.is_infinite() || point.z.is_infinite() }
+pub fn is_vec3_inf(point: &Vec3) -> bool {
+    point.x.is_infinite() || point.y.is_infinite() || point.z.is_infinite()
+}
 
 /// check if any value in point is nan
-pub fn is_vec3_nan(point: &Vec3) -> bool { point.x.is_nan() || point.y.is_nan() || point.z.is_nan() }
+pub fn is_vec3_nan(point: &Vec3) -> bool {
+    point.x.is_nan() || point.y.is_nan() || point.z.is_nan()
+}
 
-const PRECISION: f32 = 0.001;
+pub fn distance(left: &Vec2, right: &Vec2) -> f32 {
+    ((left.x - right.x).powi(2) + (left.y - right.y).powi(2)).sqrt()
+}
 
 /// Trait for intersection of different geo types
 pub trait Intersect<RHS = Self> {
@@ -155,7 +150,8 @@ impl Line3d {
     /// assert!(line.on_line_2d(&point));
     /// ```
     pub fn on_line_2d(&self, point: &Point3d) -> bool {
-        (distance(&self.p1.pos.xy(), &point.pos.xy()) + distance(&self.p2.pos.xy(), &point.pos.xy()))
+        (distance(&self.p1.pos.xy(), &point.pos.xy())
+            + distance(&self.p2.pos.xy(), &point.pos.xy()))
             - distance(&self.p1.pos.xy(), &self.p2.pos.xy())
             < PRECISION
     }
@@ -172,7 +168,10 @@ impl Line3d {
     /// assert!(bounds.in_2d_bounds(&point));
     /// ```
     pub fn in_2d_bounds(&self, point: &Point3d) -> bool {
-        point.pos.x >= self.p1.pos.x && point.pos.x <= self.p2.pos.x && point.pos.y >= self.p1.pos.y && point.pos.y <= self.p2.pos.y
+        point.pos.x >= self.p1.pos.x
+            && point.pos.x <= self.p2.pos.x
+            && point.pos.y >= self.p1.pos.y
+            && point.pos.y <= self.p2.pos.y
     }
 
     /// Check if line segments intersect, ignoring Z axis
@@ -241,7 +240,7 @@ impl Intersect<Plane> for Line3d {
         } else if is_vec3_nan(&answer) {
             Some(Shape::Line3d(self))
         } else {
-            Some(Shape::Point3d(Point3d{pos: answer}))
+            Some(Shape::Point3d(Point3d { pos: answer }))
         }
     }
 }
@@ -348,7 +347,7 @@ impl Triangle3d {
     /// assert_eq!(tri, Triangle3d::new((2., 1., 1.), (2., 2., 1.), (3., 1., 1.)));
     /// ```
     pub fn translate(&mut self, x: f32, y: f32, z: f32) {
-        let p = Point3d::new(x,y,z);
+        let p = Point3d::new(x, y, z);
         self.p1 = self.p1 + p;
         self.p2 = self.p2 + p;
         self.p3 = self.p3 + p;
@@ -628,14 +627,29 @@ impl Tool {
     }
 }
 
+pub struct Grid {
+    cols: usize,
+    rows: usize,
+    points: Vec<Point3d>
+}
+
+impl Index<usize> for Grid {
+    type Output = [Point3d];
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.points[index * self.cols .. (index+1) * self.cols]
+    }
+}
+
 pub fn generate_grid(bounds: &Line3d, scale: &f32) -> Vec<Vec<Point3d>> {
     let max_x = (bounds.p2.pos.x * scale) as i32;
     let min_x = (bounds.p1.pos.x * scale) as i32;
     let max_y = (bounds.p2.pos.y * scale) as i32;
     let min_y = (bounds.p1.pos.y * scale) as i32;
     (min_x..=max_x)
+        .into_par_iter()
         .map(|x| {
             (min_y..=max_y)
+                .into_par_iter()
                 .map(move |y| Point3d::new(x as f32 / scale, y as f32 / scale, bounds.p1.pos.z))
                 .collect::<Vec<_>>()
         })
@@ -681,7 +695,11 @@ pub fn generate_columns_chunks(
         .collect()
 }
 
-pub fn generate_heightmap(grid: &[Vec<Point3d>], partition: &[Vec<Triangle3d>], vk: &Vk) -> Vec<Vec<Point3d>> {
+pub fn generate_heightmap(
+    grid: &[Vec<Point3d>],
+    partition: &[Vec<Triangle3d>],
+    vk: &Vk,
+) -> Vec<Vec<Point3d>> {
     grid.iter()
         .enumerate()
         .map(|(column, test)| {

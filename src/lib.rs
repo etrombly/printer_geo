@@ -10,10 +10,7 @@ pub mod python;
 pub mod stl;
 
 #[cfg(feature = "python")]
-use crate::{
-    python::compute_py::*, python::config_py::*, python::geo_py::*,
-    python::stl_py::*,
-};
+use crate::{python::compute_py::*, python::config_py::*, python::geo_py::*, python::stl_py::*};
 
 #[cfg(feature = "python")]
 #[pymodule]

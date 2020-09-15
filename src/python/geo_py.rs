@@ -1,20 +1,15 @@
-use crate::geo::*;
-use crate::compute::Vk;
+use crate::{compute::Vk, geo::*};
 
-use pyo3::prelude::*;
-use pyo3::types::PyList;
+use pyo3::{prelude::*, types::PyList};
 
 #[pymethods]
 impl Point3d {
     #[getter]
-    fn position(&self) -> PyResult<(f32, f32, f32)> {
-        Ok((self.pos.x, self.pos.y, self.pos.z))
-    }
+    fn position(&self) -> PyResult<(f32, f32, f32)> { Ok((self.pos.x, self.pos.y, self.pos.z)) }
 }
 
 #[pymodule]
 pub fn geo(_py: Python, m: &PyModule) -> PyResult<()> {
-
     #[pyfn(m, "add_tri")]
     fn add_tri_py(
         py: Python,

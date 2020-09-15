@@ -1,14 +1,12 @@
 #version 450
-#define EPSILON 0.0000001
 
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
-// using floats instead of a vec3 because vec3 is aligned to 16 bytes
-// this saves 4 bytes per point
-struct Point {
+// vec3 with a scaled z axis so we can use atomicMax
+struct PointScale {
     float x;
     float y;
-    float z;
+    int z;
 };
 
 struct Triangle {
@@ -28,32 +26,38 @@ layout(std430, set = 0, binding = 0) readonly buffer Triangles {
 } tris;
 
 layout(std430, set = 0, binding = 1) coherent buffer Points {
-    Point point[];
+    PointScale point[];
 } points;
 
-bool ray_tri_intersect(in vec3 O, in vec3 p1, in vec3 p2, in vec3 p3, out float hit) {
-    // hard code the direction as casting up
-    // TODO: since the direction is always the same precompute up until inv_det
-    vec3 D = vec3(0,0,1);
-    // standard ray/triangle intersection, modified from a stackoverflow question
-    vec3 e1 = p2 - p1; 
-    vec3 e2 = p3 - p1; 
-    vec3 P = cross(D, e2);
-    float det = dot(e1, P); 
-    if(det > -EPSILON && det < EPSILON) return false; 
-    float inv_det = 1.0 / det; 
-    vec3 T = O - p1; 
-    float u = dot(T, P) * inv_det; 
-    if(u < 0 || u > 1) return false; 
-    vec3 Q = cross(T, e1); 
-    float v = dot(D, Q) * inv_det; 
-    if(v < 0 || u + v  > 1) return false; 
-    float t = dot(e2, Q) * inv_det;
-    if (t > EPSILON) {
-        hit = O[2] + t * D[2];
-        return true;
+bool ray_tri_intersect(in vec3 origin, in vec3 p1, in vec3 p2, in vec3 p3, out int hit) {
+    // watertight ray/tri intersect from http://jcgt.org/published/0002/01/05/paper.pdf
+    // modified to hard code ray direction
+    vec3 A = p1 - origin;
+    vec3 B = p2 - origin;
+    vec3 C = p3 - origin;
+    float Ax = A[0] * A[2];
+    float Ay = A[1] * A[2];
+    float Bx = B[0] * B[2];
+    float By = B[1] * B[2];
+    float Cx = C[0] * C[2];
+    float Cy = C[1] * C[2];
+    float U = Cx * By - Cy * Bx;
+    float V = Ax * Cy - Ay * Cx;
+    float W = Bx * Ay - By * Ax;
+
+    if ((U < 0 || V < 0 || W < 0) && (U > 0 || V > 0 || W > 0)) {
+        return false;
     }
-    return false;
+
+    float det = U + V + W;
+    if (det == 0) {
+        return false;
+    }
+
+    float T = U * A[2] + V * B[2] + W * C[2];
+    float rcpDet = 1.0 / det;
+    hit = int((origin[2] + (T * rcpDet)) * 100);
+    return true;
 }
 
 void main() {
@@ -63,19 +67,17 @@ void main() {
     uint idy = gl_GlobalInvocationID.y;
     // because local workgroup size is 32x32 and input may not be evenly divisible need to check the length
     if (idx <= tris.tri.length() && idy <= points.point.length()){
-        float hit = 0;
+        int hit = 0;
         // convert from floats to vecs
-        vec3 origin = vec3(points.point[idy].x, points.point[idy].y, points.point[idy].z);
+        vec3 origin = vec3(points.point[idy].x, points.point[idy].y, float(points.point[idy].z) / 100);
         vec3 p1 = vec3(tris.tri[idx].p1x, tris.tri[idx].p1y, tris.tri[idx].p1z);
         vec3 p2 = vec3(tris.tri[idx].p2x, tris.tri[idx].p2y, tris.tri[idx].p2z);
         vec3 p3 = vec3(tris.tri[idx].p3x, tris.tri[idx].p3y, tris.tri[idx].p3z);
         // check if the current point intersects with the current triangle
         bool intersection = ray_tri_intersect(origin, p1, p2, p3, hit);
         // if Z is higher write it as the current Z
-        // TODO: this should probably be atomic, it's been ok so far because there are usually only 2 hits
-        // per point if the model is valid, but may cause a data race at some point
-        if (intersection && hit > points.point[idy].z) {
-            points.point[idy].z = hit;
+        if (intersection) {
+            atomicMax(points.point[idy].z, hit);
         }
     }
 }

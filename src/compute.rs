@@ -185,7 +185,6 @@ impl Vk {
             )?
         };
         let queue = queues.next().ok_or_else(|| VkError::Queue)?;
-        let queue = queues.next().ok_or_else(|| VkError::Queue)?;
         let shader = drop::Shader::load(device.clone())?;
         let cp = Arc::new(ComputePipeline::new(
             device.clone(),
@@ -232,8 +231,9 @@ pub fn intersect_tris(
 
     // copy points into dest buffer, used for input and output because
     // the length and type of inputs and outputs are the same
+    // scale z to an int so we can use atomicMax
     let dest =
-        CpuAccessibleBuffer::from_iter(vk.device.clone(), usage, false, points.iter().copied())?;
+        CpuAccessibleBuffer::from_iter(vk.device.clone(), usage, false, points.iter().map(|point| (point.pos[0], point.pos[1], (point.pos[2] * 100.) as i32)))?;
 
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
@@ -260,7 +260,7 @@ pub fn intersect_tris(
     finished.then_signal_fence_and_flush()?.wait(None)?;
     let dest_content = dest.read()?;
 
-    Ok(dest_content.to_vec())
+    Ok(dest_content.to_vec().iter().map(|x| Point3d::new(x.0, x.1, x.2 as f32 / 100.)).collect())
 }
 
 pub fn heightmap(
