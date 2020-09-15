@@ -5,12 +5,15 @@
 pub use crate::geo::*;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 use thiserror::Error;
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer, ImmutableBuffer},
     command_buffer::{AutoCommandBufferBuilder, CommandBuffer},
-    descriptor::{descriptor_set::PersistentDescriptorSet, PipelineLayoutAbstract},
+    descriptor::{
+        descriptor_set::PersistentDescriptorSet, pipeline_layout::PipelineLayout,
+        PipelineLayoutAbstract,
+    },
     device::{Device, DeviceExtensions, Features, Queue},
     instance::{
         debug::{DebugCallback, MessageSeverity, MessageType},
@@ -19,9 +22,6 @@ use vulkano::{
     pipeline::ComputePipeline,
     sync::GpuFuture,
 };
-use std::time::Instant;
-use vulkano::descriptor::pipeline_layout::PipelineLayout;
-
 
 #[derive(Error, Debug)]
 /// Error types for vulkan devices
@@ -75,7 +75,7 @@ pub struct Vk {
     pub device: Arc<Device>,
     pub queue: Arc<Queue>,
     pub debug_callback: Option<DebugCallback>,
-    cp: Arc<ComputePipeline<PipelineLayout<drop::Layout>>>
+    cp: Arc<ComputePipeline<PipelineLayout<drop::Layout>>>,
 }
 
 impl Vk {
@@ -232,8 +232,14 @@ pub fn intersect_tris(
     // copy points into dest buffer, used for input and output because
     // the length and type of inputs and outputs are the same
     // scale z to an int so we can use atomicMax
-    let dest =
-        CpuAccessibleBuffer::from_iter(vk.device.clone(), usage, false, points.iter().map(|point| (point.pos[0], point.pos[1], (point.pos[2] * 100.) as i32)))?;
+    let dest = CpuAccessibleBuffer::from_iter(
+        vk.device.clone(),
+        usage,
+        false,
+        points
+            .iter()
+            .map(|point| (point.pos[0], point.pos[1], (point.pos[2] * 1000.) as i32)),
+    )?;
 
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
@@ -260,48 +266,55 @@ pub fn intersect_tris(
     finished.then_signal_fence_and_flush()?.wait(None)?;
     let dest_content = dest.read()?;
 
-    Ok(dest_content.to_vec().iter().map(|x| Point3d::new(x.0, x.1, x.2 as f32 / 100.)).collect())
+    Ok(dest_content
+        .to_vec()
+        .iter()
+        .map(|x| Point3d::new(x.0, x.1, x.2 as f32 / 1000.))
+        .collect())
 }
 
-pub fn heightmap(
-    tris: &[Triangle3d],
-    vk: &Vk,
-) -> Result<Vec<f32>, ComputeError> {
+pub fn heightmap(tris: &[Triangle3d], vk: &Vk) -> Result<Vec<f32>, ComputeError> {
     // load compute shader
     let shader = drop_single::Shader::load(vk.device.clone())?;
-let now = Instant::now();
+    let now = Instant::now();
     let compute_pipeline = Arc::new(ComputePipeline::new(
         vk.device.clone(),
         &shader.main_entry_point(),
         &(),
     )?);
-println!("pipeline {:?}", now.elapsed());
-let now = Instant::now();
+    println!("pipeline {:?}", now.elapsed());
+    let now = Instant::now();
     let layout = compute_pipeline
         .layout()
         .descriptor_set_layout(0)
         .ok_or_else(|| ComputeError::Layout)?;
-        println!("layout {:?}", now.elapsed());
+    println!("layout {:?}", now.elapsed());
 
     // set up ssbo buffer
     let mut usage = BufferUsage::transfer_source();
     usage.storage_buffer = true;
 
-let now = Instant::now();
+    let now = Instant::now();
     // copy tris into source buffer
     let (source, source_future) =
         ImmutableBuffer::from_iter(tris.iter().copied(), usage, vk.queue.clone())?;
     source_future.then_signal_fence_and_flush()?.wait(None)?;
     println!("copy tris {:?}", now.elapsed());
-let now = Instant::now();
+    let now = Instant::now();
     let mut dest_dummy: Vec<f32> = Vec::with_capacity(tris.len());
-    unsafe {dest_dummy.set_len(tris.len());}
+    unsafe {
+        dest_dummy.set_len(tris.len());
+    }
     // copy points into dest buffer, used for input and output because
     // the length and type of inputs and outputs are the same
-    let dest =
-        CpuAccessibleBuffer::from_iter(vk.device.clone(), usage, false, dest_dummy.iter().copied())?;
-        println!("copy dest {:?}", now.elapsed());
-let now = Instant::now();
+    let dest = CpuAccessibleBuffer::from_iter(
+        vk.device.clone(),
+        usage,
+        false,
+        dest_dummy.iter().copied(),
+    )?;
+    println!("copy dest {:?}", now.elapsed());
+    let now = Instant::now();
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
             .add_buffer(source.clone())?
@@ -314,17 +327,10 @@ let now = Instant::now();
     for i in 0..10000 {
         let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
         let i = i as f32 / 100.;
-        let push_constants = drop_single::ty::PushConstantData {
-            x: i,
-            y: i,
-        };
-    
+        let push_constants = drop_single::ty::PushConstantData { x: i, y: i };
+
         builder.dispatch(
-            [
-                (tris.len() as u32 / 64) + 1,
-                1,
-                1,
-            ],
+            [(tris.len() as u32 / 64) + 1, 1, 1],
             compute_pipeline.clone(),
             set.clone(),
             push_constants,
@@ -332,7 +338,7 @@ let now = Instant::now();
         let command_buffer = builder.build()?;
         let finished = command_buffer.execute(vk.queue.clone())?;
         finished.then_signal_fence_and_flush()?.wait(None)?;
-        
+
         let dest_content = dest.read()?;
     }
     println!("10000 {:?}", now.elapsed());

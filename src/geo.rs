@@ -11,10 +11,9 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::{Ordering, PartialEq},
-    ops::{Add, Mul, Sub},
+    ops::{Add, Index, Mul, Sub},
 };
 use ultraviolet::{Vec2, Vec3};
-use std::ops::Index;
 
 const PRECISION: f32 = 0.001;
 
@@ -138,6 +137,10 @@ impl Line3d {
     }
 
     pub fn from_points(p1: &Point3d, p2: &Point3d) -> Line3d { Line3d { p1: *p1, p2: *p2 } }
+
+    pub fn length_2d(&self) -> f32 { distance(&self.p1.pos.xy(), &self.p2.pos.xy()) }
+
+    pub fn get_point(&self, t: f32) -> Point3d { (self.p2 - self.p1) * t + self.p1 }
 
     /// Check if point is on line segment
     ///
@@ -552,20 +555,24 @@ pub fn move_to_zero(tris: &mut Vec<Triangle3d>) {
 #[derive(Default, Clone)]
 pub struct Tool {
     pub bbox: Line3d,
+    pub diameter: f32,
     pub points: Vec<Point3d>,
 }
 
 impl Tool {
-    pub fn new_endmill(radius: f32, scale: f32) -> Tool {
+    pub fn new_endmill(diameter: f32, scale: f32) -> Tool {
+        let radius = diameter / 2.;
         let circle = Circle::new(Point3d::new(0., 0., 0.), radius);
         let points = Tool::circle_to_points(&circle, scale);
         Tool {
             bbox: circle.bbox(),
+            diameter,
             points,
         }
     }
 
-    pub fn new_v_bit(radius: f32, angle: f32, scale: f32) -> Tool {
+    pub fn new_v_bit(diameter: f32, angle: f32, scale: f32) -> Tool {
+        let radius = diameter / 2.;
         let circle = Circle::new(Point3d::new(0., 0., 0.), radius);
         let percent = (90. - (angle / 2.)).to_radians().tan();
         let points = Tool::circle_to_points(&circle, scale);
@@ -579,13 +586,15 @@ impl Tool {
             .collect();
         Tool {
             bbox: circle.bbox(),
+            diameter,
             points,
         }
     }
 
     // TODO: this approximates a ball end mill, probably want to generate the
     // geometry better
-    pub fn new_ball(radius: f32, scale: f32) -> Tool {
+    pub fn new_ball(diameter: f32, scale: f32) -> Tool {
+        let radius = diameter / 2.;
         let circle = Circle::new(Point3d::new(0., 0., 0.), radius);
         let points = Tool::circle_to_points(&circle, scale);
         let points = points
@@ -603,6 +612,7 @@ impl Tool {
             .collect();
         Tool {
             bbox: circle.bbox(),
+            diameter,
             points,
         }
     }
@@ -630,14 +640,27 @@ impl Tool {
 pub struct Grid {
     cols: usize,
     rows: usize,
-    points: Vec<Point3d>
+    points: Vec<Point3d>,
 }
 
 impl Index<usize> for Grid {
     type Output = [Point3d];
+
     fn index(&self, index: usize) -> &Self::Output {
-        &self.points[index * self.cols .. (index+1) * self.cols]
+        &self.points[index * self.cols..(index + 1) * self.cols]
     }
+}
+
+#[cfg_attr(feature = "python", pyclass)]
+/// Tool for CAM operations, represented as a point cloud
+#[derive(Default, Clone)]
+pub struct DropCutter {
+    pub model: Vec<Triangle3d>,
+    pub heightmap: Vec<Vec<Point3d>>,
+    pub tool: Tool,
+    pub x_offset: f32,
+    pub y_offset: f32,
+    pub resolution: f32,
 }
 
 pub fn generate_grid(bounds: &Line3d, scale: &f32) -> Vec<Vec<Point3d>> {
