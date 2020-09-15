@@ -1,0 +1,76 @@
+#version 450
+#define EPSILON 0.0000001
+#define FLT_MIN 1.175494351e-38
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+// using floats instead of a vec3 because vec3 is aligned to 16 bytes
+// this saves 4 bytes per point
+struct Point {
+    float x;
+    float y;
+    float z;
+};
+
+struct Triangle {
+    float p1x;
+    float p1y;
+    float p1z;
+    float p2x;
+    float p2y;
+    float p2z;
+    float p3x;
+    float p3y;
+    float p3z;
+};
+
+layout(std430, set = 0, binding = 0) readonly buffer Triangles {
+    Triangle tri[];
+} tris;
+
+layout(std430, set = 0, binding = 1) buffer Results {
+    float z[];
+} results;
+
+layout(push_constant) uniform PushConstantData {
+    float x;
+    float y;
+} pc;
+
+bool ray_tri_intersect(in vec3 O, in vec3 p1, in vec3 p2, in vec3 p3, out float hit) {
+    // hard code the direction as casting up
+    vec3 D = vec3(0,0,1);
+    // standard ray/triangle intersection, modified from a stackoverflow question
+    vec3 e1 = p2 - p1; 
+    vec3 e2 = p3 - p1; 
+    vec3 P = cross(D, e2);
+    float det = dot(e1, P); 
+    if(det > -EPSILON && det < EPSILON) return false; 
+    float inv_det = 1.0 / det; 
+    vec3 T = O - p1; 
+    float u = dot(T, P) * inv_det; 
+    if(u < 0 || u > 1) return false; 
+    vec3 Q = cross(T, e1); 
+    float v = dot(D, Q) * inv_det; 
+    if(v < 0 || u + v  > 1) return false; 
+    float t = dot(e2, Q) * inv_det;
+    if (t > EPSILON) {
+        hit = O[2] + t * D[2];
+        return true;
+    }
+    return false;
+}
+
+void main() {
+    // idx is triangle array index
+    uint idx = gl_GlobalInvocationID.x;
+    float hit = FLT_MIN;
+    // convert from floats to vecs
+    vec3 origin = vec3(pc.x, pc.y, FLT_MIN);
+    vec3 p1 = vec3(tris.tri[idx].p1x, tris.tri[idx].p1y, tris.tri[idx].p1z);
+    vec3 p2 = vec3(tris.tri[idx].p2x, tris.tri[idx].p2y, tris.tri[idx].p2z);
+    vec3 p3 = vec3(tris.tri[idx].p3x, tris.tri[idx].p3y, tris.tri[idx].p3z);
+    // check if the current point intersects with the current triangle
+    bool intersection = ray_tri_intersect(origin, p1, p2, p3, hit);
+    results.z[idx] = hit;
+}
