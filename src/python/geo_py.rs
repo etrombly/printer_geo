@@ -1,5 +1,5 @@
 use crate::{compute::Vk, geo::*};
-
+use rayon::prelude::*;
 use pyo3::{prelude::*, types::PyList};
 
 #[pymethods]
@@ -53,7 +53,7 @@ impl DropCutter {
     fn generate_toolpath(&self, points: Vec<Point3d>) -> Vec<Point3d> {
         let scale = 1. / self.resolution;
         points
-            .iter()
+            .par_iter()
             .map(|point| {
                 let x = (point.pos.x * scale).round() as usize;
                 let y = (point.pos.y * scale).round() as usize;
@@ -137,7 +137,7 @@ pub fn geo(_py: Python, m: &PyModule) -> PyResult<()> {
     #[pyfn(m, "sample_line")]
     fn sample_line_py(_py: Python, line: Line3d, sample: f32) -> Vec<Point3d> {
         let steps = (line.length_2d() / sample) as usize + 1;
-        (0..steps)
+        (0..steps).into_par_iter()
             .map(|i| {
                 let frac = i as f32 / steps as f32;
                 line.get_point(frac)

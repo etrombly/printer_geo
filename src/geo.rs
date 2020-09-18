@@ -687,7 +687,7 @@ pub fn generate_columns(
 ) -> Vec<Line3d> {
     let max_y = (bounds.p2.pos.y * scale) as i32;
     let min_y = (bounds.p1.pos.y * scale) as i32;
-    grid.iter()
+    grid.par_iter()
         .map(|x| {
             // bounding box for this column
             Line3d {
@@ -706,7 +706,7 @@ pub fn generate_columns_chunks(
 ) -> Vec<Line3d> {
     let max_y = (bounds.p2.pos.y * scale) as i32;
     let min_y = (bounds.p1.pos.y * scale) as i32;
-    grid.chunks(10)
+    grid.par_chunks(10)
         .map(|x| {
             let last = x.len() - 1;
             // bounding box for this column
