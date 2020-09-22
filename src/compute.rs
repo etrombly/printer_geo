@@ -287,7 +287,7 @@ pub fn heightmap(tris: &[Triangle3d], vk: &Vk) -> Result<Vec<f32>, ComputeError>
     let layout = compute_pipeline
         .layout()
         .descriptor_set_layout(0)
-        .ok_or_else(|| ComputeError::Layout)?;
+        .ok_or(ComputeError::Layout)?;
     println!("layout {:?}", now.elapsed());
 
     // set up ssbo buffer
@@ -368,7 +368,7 @@ pub fn partition_tris(
     let layout = compute_pipeline
         .layout()
         .descriptor_set_layout(0)
-        .ok_or_else(|| ComputeError::Layout)?;
+        .ok_or(ComputeError::Layout)?;
 
     // set up ssbo buffer
     let mut usage = BufferUsage::transfer_source();
@@ -405,8 +405,8 @@ pub fn partition_tris(
 
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
-            .add_buffer(source.clone())?
-            .add_buffer(columns_buffer.clone())?
+            .add_buffer(source)?
+            .add_buffer(columns_buffer)?
             .add_buffer(dest.clone())?
             .build()?,
     );
@@ -420,7 +420,7 @@ pub fn partition_tris(
             1,
         ],
         compute_pipeline.clone(),
-        set.clone(),
+        set,
         (),
     )?;
     let command_buffer = builder.build()?;

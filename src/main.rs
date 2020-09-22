@@ -1,27 +1,35 @@
-use printer_geo::{compute::*, geo::*, stl::*};
+use printer_geo::{bfs::*, compute::*, geo::*, stl::*};
 use rayon::prelude::*;
 use std::{fs::File, io::Write};
 
 fn main() {
-    let tri = Triangle3d::new((0., 0., 1.), (4., 4., 1.), (3., 3., 1.));
-    let bounds = Line3d::new((1., 1., 1.), (2., 2., 1.));
-    assert!(tri.in_2d_bounds(&bounds));
-    let tri = Triangle3d::new((3., 3., 1.), (4., 4., 1.), (5., 5., 1.));
-    assert!(!tri.in_2d_bounds(&bounds));
-    let line1 = Line3d::new((0., 0., 0.), (1., 1., 1.));
-    let line2 = Line3d::new((1., 0., 1.), (0., 1., 0.));
-    assert!(line1.intersect_2d(&line2));
-    let line1 = Line3d::new((0., 0., 0.), (0., 1., 1.));
-    let line2 = Line3d::new((1., 0., 1.), (1., 1., 0.));
-    assert!(!line1.intersect_2d(&line2));
+    let mut grid = Vec::new();
+    let one = Point3d::new(0., 0., -1.);
+    let zero = Point3d::new(0., 0., 0.);
+    grid.push(vec![one, one, zero, zero, zero, zero]);
+    grid.push(vec![one, one, zero, zero, zero, zero]);
+    grid.push(vec![zero, zero, zero, zero, zero, one]);
+    let islands = get_islands(&grid, -0.1);
+    println!("{:?}", islands);
+    //let tri = Triangle3d::new((0., 0., 1.), (4., 4., 1.), (3., 3., 1.));
+    //let bounds = Line3d::new((1., 1., 1.), (2., 2., 1.));
+    //assert!(tri.in_2d_bounds(&bounds));
+    //let tri = Triangle3d::new((3., 3., 1.), (4., 4., 1.), (5., 5., 1.));
+    //assert!(!tri.in_2d_bounds(&bounds));
+    //let line1 = Line3d::new((0., 0., 0.), (1., 1., 1.));
+    //let line2 = Line3d::new((1., 0., 1.), (0., 1., 0.));
+    //assert!(line1.intersect_2d(&line2));
+    //let line1 = Line3d::new((0., 0., 0.), (0., 1., 1.));
+    //let line2 = Line3d::new((1., 0., 1.), (1., 1., 0.));
+    //assert!(!line1.intersect_2d(&line2));
     // let stl = load_stl("3DBenchy.stl");
     //
     // let triangles = to_triangles3d(&stl);
     // let tri_vk = to_tri_vk(&triangles);
     // let vk = init_vk();
     // let bboxes: Vec<LineVk> = compute_bbox(&tri_vk, &vk);
-    // let bboxes2: Vec<Line3d> = triangles.par_iter().map(|x| x.bbox()).collect();
-    // println!("{:?}\n{:?}", bboxes[0], bboxes2[0]);
+    // let bboxes2: Vec<Line3d> = triangles.par_iter().map(|x|
+    // x.bbox()).collect(); println!("{:?}\n{:?}", bboxes[0], bboxes2[0]);
     // println!("{:?}\n{:?}", bboxes[1], bboxes2[1]);
     //
     // for i in 0..30 {
@@ -62,8 +70,8 @@ fn main() {
     //    lines.len()
     // );
     // println!("max_x: {} max_y: {}", max_x, max_y);
-    // let mut f = File::create(format!("image{}.svg", i)).expect("Unable to create
-    // file"); f.write_all(
+    // let mut f = File::create(format!("image{}.svg", i)).expect("Unable to
+    // create file"); f.write_all(
     // simplesvg::Svg(
     // lines,
     // max_x.trunc() as u32 * 100,
@@ -74,6 +82,7 @@ fn main() {
     // )
     // .unwrap();
     // }
+    /*
     let line = Line3d::new((0.0, 0.0, 0.0), (1.0, 4.0, 2.0));
     let plane = Plane::new((0.0, 0.0, 1.0), (0.0, 0.0, 2.0));
     let answer = line.intersect(plane);
@@ -96,4 +105,5 @@ fn main() {
     let triangle = Triangle3d::new((0.0, 0.0, 1.0), (1.0, 0.0, 1.0), (0.0, 1.0, 1.0));
     let answer = triangle.intersect(plane);
     println!("triangle on plane\n    {:?}", answer);
+    */
 }

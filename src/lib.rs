@@ -1,6 +1,7 @@
 #[cfg(feature = "python")]
 use pyo3::{prelude::*, wrap_pymodule};
 
+pub mod bfs;
 pub mod compute;
 pub mod config;
 pub mod geo;

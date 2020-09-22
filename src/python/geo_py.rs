@@ -1,6 +1,6 @@
 use crate::{compute::Vk, geo::*};
-use rayon::prelude::*;
 use pyo3::{prelude::*, types::PyList};
+use rayon::prelude::*;
 
 #[pymethods]
 impl Point3d {
@@ -137,7 +137,8 @@ pub fn geo(_py: Python, m: &PyModule) -> PyResult<()> {
     #[pyfn(m, "sample_line")]
     fn sample_line_py(_py: Python, line: Line3d, sample: f32) -> Vec<Point3d> {
         let steps = (line.length_2d() / sample) as usize + 1;
-        (0..steps).into_par_iter()
+        (0..steps)
+            .into_par_iter()
             .map(|i| {
                 let frac = i as f32 / steps as f32;
                 line.get_point(frac)
