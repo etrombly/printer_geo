@@ -77,8 +77,11 @@ pub struct Opt {
     #[structopt(short, long, parse(from_os_str))]
     pub output: PathBuf,
 
-    #[structopt(short, long, parse(from_os_str))]
+    #[structopt(long, parse(from_os_str))]
     pub heightmap: Option<PathBuf>,
+
+    #[structopt(long, parse(from_os_str))]
+    pub restmap: Option<PathBuf>,
 
     #[structopt(short, long)]
     pub diameter: f32,
@@ -98,6 +101,6 @@ pub struct Opt {
     #[structopt(short, long)]
     pub stepdown: Option<f32>,
 
-    #[structopt(short, long, possible_values = &ToolType::variants(), default_value="ball", case_insensitive = true)]
+    #[structopt(short, long, possible_values = &ToolType::variants(), default_value="endmill", case_insensitive = true)]
     pub tool: ToolType,
 }

@@ -16,7 +16,6 @@ pub fn bfs(
     node: (usize, usize),
     visited: &mut Visited,
     data: &[Vec<Point3d>],
-    depth: f32,
 ) -> Option<Vec<(usize, usize)>> {
     if visited.visited(node.0, node.1) {
         return None;
@@ -37,7 +36,7 @@ pub fn bfs(
             if x >= 0 && y >= 0 {
                 let x = x as usize;
                 let y = y as usize;
-                if x < data.len() && y < data[0].len() && data[x][y].pos.z <= depth {
+                if x < data.len() && y < data[0].len() && !data[x][y].pos.z.is_nan(){
                     stack.push((x, y));
                 }
             }
@@ -46,7 +45,7 @@ pub fn bfs(
     Some(lands)
 }
 
-pub fn get_islands(data: &[Vec<Point3d>], depth: f32) -> Vec<Vec<Point3d>> {
+pub fn get_islands(data: &[Vec<Point3d>]) -> Vec<Vec<Point3d>> {
     let mut visited = Visited::new(data.len(), data[0].len());
     let indices: Vec<_> = data.iter()
         .enumerate()
@@ -54,10 +53,10 @@ pub fn get_islands(data: &[Vec<Point3d>], depth: f32) -> Vec<Vec<Point3d>> {
             x.iter()
                 .enumerate()
                 .filter_map(|(y_index, point)| {
-                    if point.pos.z <= depth {
-                        bfs((x_index, y_index), &mut visited, data, depth)
-                    } else {
+                    if point.pos.z.is_nan() {
                         None
+                    } else {
+                        bfs((x_index, y_index), &mut visited, data)
                     }
                 })
                 .collect::<Vec<_>>()

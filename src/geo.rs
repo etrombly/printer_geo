@@ -639,7 +639,6 @@ impl Tool {
 
 pub struct Grid {
     cols: usize,
-    rows: usize,
     points: Vec<Point3d>,
 }
 
