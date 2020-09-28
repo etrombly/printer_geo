@@ -356,6 +356,11 @@ impl Triangle3d {
         self.p3 = self.p3 + p;
     }
 
+    pub fn intersect_ray(&self, point: Point3d) -> Option<Point3d> {
+        let line = Line3d{p1: point, p2: Point3d::new(0.,0.,-1.)};
+        self.intersect(line)
+    }
+
     pub fn bbox(self) -> Line3d {
         Line3d {
             p1: Point3d::new(self.min_x(), self.min_y(), self.min_z()),
@@ -864,7 +869,6 @@ pub fn generate_gcode(layers: &[Vec<Vec<Point3d>>], bounds: &Line3d) -> String {
     output
 }
 
-/*
 pub fn intersect_tris_fallback(tris: &[Triangle3d], points: &[Point3d]) -> Vec<Point3d> {
     points
         .par_iter()
@@ -873,10 +877,9 @@ pub fn intersect_tris_fallback(tris: &[Triangle3d], points: &[Point3d]) -> Vec<P
                 point.pos.x,
                 point.pos.y,
                 tris.iter()
-                    .filter_map(|tri| tri.intersect_ray(&point))
-                    .fold(f32::NAN, f32::max),
+                    .filter_map(|tri| tri.intersect_ray(*point))
+                    .fold(f32::NAN, |acc, x| f32::max(acc, x.pos.z)),
             )
         })
         .collect()
 }
-*/
