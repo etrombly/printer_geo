@@ -188,22 +188,68 @@ impl Line3d {
     /// assert!(line1.intersect_2d(&line2));
     /// ```
     pub fn intersect_2d(self, other: &Line3d) -> bool {
-        let a1 = self.p2.pos.y - self.p1.pos.y;
-        let b1 = self.p1.pos.x - self.p2.pos.x;
-        let c1 = a1 * self.p1.pos.x + b1 * self.p1.pos.x;
+        let x1 = self.p1.pos.x;
+        let y1 = self.p1.pos.y;
+        let x2 = self.p2.pos.x;
+        let y2 = self.p2.pos.y;
+        let x3 = other.p1.pos.x;
+        let y3 = other.p1.pos.y;
+        let x4 = other.p2.pos.x;
+        let y4 = other.p2.pos.y;
 
-        let a2 = other.p2.pos.y - other.p1.pos.y;
-        let b2 = other.p1.pos.x - other.p2.pos.x;
-        let c2 = a2 * other.p1.pos.x + b2 * other.p1.pos.y;
+        // First line coefficients where "a1 x  +  b1 y  +  c1  =  0"
+        let a1 = y2 - y1;
+        let b1 = x1 - x2;
+        let c1 = x2 * y1 - x1 * y2;
 
-        let delta = a1 * b2 - a2 * b1;
-        let x = (b2 * c1 - b1 * c2) / delta;
-        let y = (a1 * c2 - a2 * c1) / delta;
-        delta != 0.0
-            && self.p1.pos.x.min(self.p2.pos.x) <= x
-            && x <= self.p1.pos.x.max(self.p2.pos.x)
-            && self.p1.pos.y.min(self.p2.pos.y) <= y
-            && y <= self.p1.pos.y.max(self.p2.pos.y)
+        // Second line coefficients
+        let a2 = y4 - y3;
+        let b2 = x3 - x4;
+        let c2 = x4 * y3 - x3 * y4;
+
+        let denom = a1 * b2 - a2 * b1;
+
+        // Lines are colinear
+        if denom == 0. {
+            return false;
+        }
+
+        // Compute sign values
+        let r3 = a1 * x3 + b1 * y3 + c1;
+        let r4 = a1 * x4 + b1 * y4 + c1;
+
+        // Sign values for second line
+        let r1 = a2 * x1 + b2 * y1 + c2;
+        let r2 = a2 * x2 + b2 * y2 + c2;
+
+        // Flag denoting whether intersection point is on passed line segments. If this
+        // is false, the intersection occurs somewhere along the two
+        // mathematical, infinite lines instead.
+        //
+        // Check signs of r3 and r4.  If both point 3 and point 4 lie on same side of
+        // line 1, the line segments do not intersect.
+        //
+        // Check signs of r1 and r2.  If both point 1 and point 2 lie on same side of
+        // second line segment, the line segments do not intersect.
+        let is_on_segments = (r3 != 0. && r4 != 0. && r3.signum() == r4.signum())
+            || (r1 != 0. && r2 != 0. && r1.signum() == r2.signum());
+
+        // If we got here, line segments intersect. Compute intersection point using
+        // method similar to that described here: http://paulbourke.net/geometry/pointlineplane/#i2l
+
+        // The denom/2 is to get rounding instead of truncating. It is added or
+        // subtracted to the numerator, depending upon the sign of the
+        // numerator. let offset = if denom < 0. { -denom / 2. } else { denom /
+        // 2. };
+
+        //let num = b1 * c2 - b2 * c1;
+        //let x = if num < 0. { num - offset } else { num + offset } / denom;
+
+        //let num = a2 * c1 - a1 * c2;
+        //let y = if num < 0. { num - offset } else { num + offset } / denom;
+
+        //Some((Point::new(x, y), is_on_segments))
+        !is_on_segments
     }
 
     /// Create bounding box from line
@@ -328,6 +374,7 @@ impl Triangle3d {
             p1: self.p1,
             p2: self.p3,
         };
+
         bbox.in_2d_bounds(&self.p1)
             || bbox.in_2d_bounds(&self.p2)
             || bbox.in_2d_bounds(&self.p3)
@@ -357,7 +404,10 @@ impl Triangle3d {
     }
 
     pub fn intersect_ray(&self, point: Point3d) -> Option<Point3d> {
-        let line = Line3d{p1: point, p2: Point3d::new(0.,0.,-1.)};
+        let line = Line3d {
+            p1: point,
+            p2: Point3d::new(0., 0., -1.),
+        };
         self.intersect(line)
     }
 
@@ -683,41 +733,37 @@ pub fn generate_grid(bounds: &Line3d, scale: &f32) -> Vec<Vec<Point3d>> {
         .collect()
 }
 
-pub fn generate_columns(
-    grid: &[Vec<Point3d>],
-    bounds: &Line3d,
-    resolution: &f32,
-    scale: &f32,
-) -> Vec<Line3d> {
+pub fn generate_columns(bounds: &Line3d, scale: &f32) -> Vec<Line3d> {
     let max_y = (bounds.p2.pos.y * scale) as i32;
     let min_y = (bounds.p1.pos.y * scale) as i32;
-    grid.par_iter()
+    let mut last = (bounds.p1.pos.x * scale) as i32;
+    ((bounds.p1.pos.x * scale) as i32 + 10..=(bounds.p2.pos.x * scale) as i32)
         .map(|x| {
             // bounding box for this column
-            Line3d {
-                p1: Point3d::new(x[0].pos.x - resolution, min_y as f32 / scale, 0.),
-                p2: Point3d::new(x[0].pos.x + resolution, max_y as f32 / scale, 0.),
-            }
+            let line = Line3d {
+                p1: Point3d::new(last as f32 / scale, min_y as f32 / scale, 0.),
+                p2: Point3d::new(x as f32 / scale, max_y as f32 / scale, 0.),
+            };
+            last = x;
+            line
         })
         .collect()
 }
 
-pub fn generate_columns_chunks(
-    grid: &[Vec<Point3d>],
-    bounds: &Line3d,
-    resolution: &f32,
-    scale: &f32,
-) -> Vec<Line3d> {
+pub fn generate_columns_chunks(bounds: &Line3d, scale: &f32) -> Vec<Line3d> {
     let max_y = (bounds.p2.pos.y * scale) as i32;
     let min_y = (bounds.p1.pos.y * scale) as i32;
-    grid.par_chunks(10)
+    let mut last = (bounds.p1.pos.x * scale) as i32;
+    ((bounds.p1.pos.x * scale) as i32 + 10..=(bounds.p2.pos.x * scale) as i32 + 10)
+        .step_by(10)
         .map(|x| {
-            let last = x.len() - 1;
             // bounding box for this column
-            Line3d {
-                p1: Point3d::new(x[0][0].pos.x - resolution, min_y as f32 / scale, 0.),
-                p2: Point3d::new(x[last][0].pos.x + resolution, max_y as f32 / scale, 0.),
-            }
+            let line = Line3d {
+                p1: Point3d::new(last as f32 / scale, min_y as f32 / scale, 0.),
+                p2: Point3d::new(x as f32 / scale, max_y as f32 / scale, 0.),
+            };
+            last = x;
+            line
         })
         .collect()
 }
@@ -880,6 +926,18 @@ pub fn intersect_tris_fallback(tris: &[Triangle3d], points: &[Point3d]) -> Vec<P
                     .filter_map(|tri| tri.intersect_ray(*point))
                     .fold(f32::NAN, |acc, x| f32::max(acc, x.pos.z)),
             )
+        })
+        .collect()
+}
+
+pub fn partition_tris_fallback(tris: &[Triangle3d], columns: &[Line3d]) -> Vec<Vec<Triangle3d>> {
+    columns
+        .par_iter()
+        .map(|column| {
+            tris.par_iter()
+                .copied()
+                .filter(|tri| tri.in_2d_bounds(column))
+                .collect::<Vec<_>>()
         })
         .collect()
 }

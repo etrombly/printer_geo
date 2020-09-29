@@ -276,31 +276,27 @@ pub fn intersect_tris(
 pub fn heightmap(tris: &[Triangle3d], vk: &Vk) -> Result<Vec<f32>, ComputeError> {
     // load compute shader
     let shader = drop_single::Shader::load(vk.device.clone())?;
-    let now = Instant::now();
+
     let compute_pipeline = Arc::new(ComputePipeline::new(
         vk.device.clone(),
         &shader.main_entry_point(),
         &(),
     )?);
-    println!("pipeline {:?}", now.elapsed());
-    let now = Instant::now();
+
     let layout = compute_pipeline
         .layout()
         .descriptor_set_layout(0)
         .ok_or(ComputeError::Layout)?;
-    println!("layout {:?}", now.elapsed());
 
     // set up ssbo buffer
     let mut usage = BufferUsage::transfer_source();
     usage.storage_buffer = true;
 
-    let now = Instant::now();
     // copy tris into source buffer
     let (source, source_future) =
         ImmutableBuffer::from_iter(tris.iter().copied(), usage, vk.queue.clone())?;
     source_future.then_signal_fence_and_flush()?.wait(None)?;
-    println!("copy tris {:?}", now.elapsed());
-    let now = Instant::now();
+
     let mut dest_dummy: Vec<f32> = Vec::with_capacity(tris.len());
     unsafe {
         dest_dummy.set_len(tris.len());
@@ -313,16 +309,14 @@ pub fn heightmap(tris: &[Triangle3d], vk: &Vk) -> Result<Vec<f32>, ComputeError>
         false,
         dest_dummy.iter().copied(),
     )?;
-    println!("copy dest {:?}", now.elapsed());
-    let now = Instant::now();
+
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
             .add_buffer(source.clone())?
             .add_buffer(dest.clone())?
             .build()?,
     );
-    println!("create set {:?}", now.elapsed());
-    let now = Instant::now();
+
     let mut results = Vec::new();
     for i in 0..10000 {
         let mut builder = AutoCommandBufferBuilder::new(vk.device.clone(), vk.queue.family())?;
@@ -341,7 +335,6 @@ pub fn heightmap(tris: &[Triangle3d], vk: &Vk) -> Result<Vec<f32>, ComputeError>
 
         let dest_content = dest.read()?;
     }
-    println!("10000 {:?}", now.elapsed());
     Ok(results)
 }
 
@@ -389,12 +382,7 @@ pub fn partition_tris(
     // u32, and need one set of columns per tri
     let count = ((tris.len() as f32 - 1.) + ((columns.len() as f32 - 1.) * tris.len() as f32) / 32.)
         .ceil() as usize;
-    // save some time by not initializing the vec, wasn't sure if this would be a
-    // problem setting up the buffer but it seems to be working well
-    let mut dest_content: Vec<u32> = Vec::with_capacity(count);
-    unsafe {
-        dest_content.set_len(count);
-    }
+    let dest_content: Vec<u32> = vec![0u32; count];
 
     let dest = CpuAccessibleBuffer::from_iter(
         vk.device.clone(),

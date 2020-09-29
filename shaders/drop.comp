@@ -25,7 +25,7 @@ layout(std430, set = 0, binding = 0) readonly buffer Triangles {
     Triangle tri[];
 } tris;
 
-layout(std430, set = 0, binding = 1) coherent buffer Points {
+layout(std430, set = 0, binding = 1) buffer Points {
     PointScale point[];
 } points;
 

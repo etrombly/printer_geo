@@ -36,7 +36,7 @@ pub fn bfs(
             if x >= 0 && y >= 0 {
                 let x = x as usize;
                 let y = y as usize;
-                if x < data.len() && y < data[0].len() && !data[x][y].pos.z.is_nan(){
+                if x < data.len() && y < data[0].len() && !data[x][y].pos.z.is_nan() {
                     stack.push((x, y));
                 }
             }
@@ -47,7 +47,8 @@ pub fn bfs(
 
 pub fn get_islands(data: &[Vec<Point3d>]) -> Vec<Vec<Point3d>> {
     let mut visited = Visited::new(data.len(), data[0].len());
-    let indices: Vec<_> = data.iter()
+    let indices: Vec<_> = data
+        .iter()
         .enumerate()
         .flat_map(|(x_index, x)| {
             x.iter()
@@ -62,7 +63,10 @@ pub fn get_islands(data: &[Vec<Point3d>]) -> Vec<Vec<Point3d>> {
                 .collect::<Vec<_>>()
         })
         .collect();
-    indices.iter().map(|x| {x.iter().map(|y| data[y.0][y.1]).collect::<Vec<_>>()}).collect()
+    indices
+        .iter()
+        .map(|x| x.iter().map(|y| data[y.0][y.1]).collect::<Vec<_>>())
+        .collect()
 }
 
 pub struct Visited {

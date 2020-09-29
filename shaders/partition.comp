@@ -71,6 +71,7 @@ bool in_column (in vec3 trip1, in vec3 trip2, in vec3 trip3, in vec3 boundsp1, i
     (trip2[0] >= boundsp1[0] && trip2[0] <= boundsp2[0]) || 
     (trip3[0] >= boundsp1[0] && trip3[0] <= boundsp2[0]) ||
     // check if any of the lines intersect either side of the bounds
+
     line_intersect(trip1, trip2, boundsp1, left) || line_intersect(trip2, trip3, boundsp1, left) ||
     line_intersect(trip1, trip3, boundsp1, left) ||
     line_intersect(trip1, trip2, boundsp2, right) || line_intersect(trip2, trip3, boundsp2, right) ||

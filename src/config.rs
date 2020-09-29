@@ -92,7 +92,7 @@ pub struct Opt {
     #[structopt(short, long, required_if("tool", "vbit"), parse(try_from_str = parse_angle))]
     pub angle: Option<f32>,
 
-    #[structopt(long, default_value="100", parse(try_from_str = parse_stepover))]
+    #[structopt(long, default_value="90", parse(try_from_str = parse_stepover))]
     pub stepover: f32,
 
     #[structopt(short, long, default_value="0.05", parse(try_from_str = parse_resolution))]
