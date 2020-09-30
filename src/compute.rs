@@ -84,11 +84,11 @@ impl Vk {
         let instance = Instance::new(None, &InstanceExtensions::none(), None)?;
         let physical = PhysicalDevice::enumerate(&instance)
             .next()
-            .ok_or_else(|| VkError::PhysicalDevice)?;
+            .ok_or(VkError::PhysicalDevice)?;
         let queue_family = physical
             .queue_families()
             .find(|&q| q.supports_graphics())
-            .ok_or_else(|| VkError::Graphics)?;
+            .ok_or(VkError::Graphics)?;
         let (device, mut queues) = {
             Device::new(
                 physical,
@@ -100,7 +100,7 @@ impl Vk {
                 [(queue_family, 0.5)].iter().cloned(),
             )?
         };
-        let queue = queues.next().ok_or_else(|| VkError::Queue)?;
+        let queue = queues.next().ok_or(VkError::Queue)?;
         let shader = drop::Shader::load(device.clone())?;
         let cp = Arc::new(ComputePipeline::new(
             device.clone(),
@@ -168,11 +168,11 @@ impl Vk {
 
         let physical = PhysicalDevice::enumerate(&instance)
             .next()
-            .ok_or_else(|| VkError::PhysicalDevice)?;
+            .ok_or(VkError::PhysicalDevice)?;
         let queue_family = physical
             .queue_families()
             .find(|&q| q.supports_graphics())
-            .ok_or_else(|| VkError::Graphics)?;
+            .ok_or(VkError::Graphics)?;
         let (device, mut queues) = {
             Device::new(
                 physical,
@@ -184,7 +184,7 @@ impl Vk {
                 [(queue_family, 0.5)].iter().cloned(),
             )?
         };
-        let queue = queues.next().ok_or_else(|| VkError::Queue)?;
+        let queue = queues.next().ok_or(VkError::Queue)?;
         let shader = drop::Shader::load(device.clone())?;
         let cp = Arc::new(ComputePipeline::new(
             device.clone(),
@@ -218,7 +218,7 @@ pub fn intersect_tris(
     let layout = compute_pipeline
         .layout()
         .descriptor_set_layout(0)
-        .ok_or_else(|| ComputeError::Layout)?;
+        .ok_or(ComputeError::Layout)?;
 
     // set up ssbo buffer
     let mut usage = BufferUsage::transfer_source();
@@ -243,7 +243,7 @@ pub fn intersect_tris(
 
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
-            .add_buffer(source.clone())?
+            .add_buffer(source)?
             .add_buffer(dest.clone())?
             .build()?,
     );
@@ -312,7 +312,7 @@ pub fn heightmap(tris: &[Triangle3d], vk: &Vk) -> Result<Vec<f32>, ComputeError>
 
     let set = Arc::new(
         PersistentDescriptorSet::start(layout.clone())
-            .add_buffer(source.clone())?
+            .add_buffer(source)?
             .add_buffer(dest.clone())?
             .build()?,
     );

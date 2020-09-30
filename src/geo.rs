@@ -39,6 +39,12 @@ impl Point3d {
     pub fn dot(&self, other: &Point3d) -> f32 { self.pos.dot(other.pos) }
 }
 
+impl Index<usize> for Point3d {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &Self::Output { &self.pos[index] }
+}
+
 impl Add<Point3d> for Point3d {
     type Output = Point3d;
 
@@ -403,12 +409,33 @@ impl Triangle3d {
         self.p3 = self.p3 + p;
     }
 
-    pub fn intersect_ray(&self, point: Point3d) -> Option<Point3d> {
-        let line = Line3d {
-            p1: point,
-            p2: Point3d::new(0., 0., -1.),
-        };
-        self.intersect(line)
+    pub fn intersect_ray(&self, point: Point3d) -> Option<f32> {
+        let a = self.p1 - point;
+        let b = self.p2 - point;
+        let c = self.p3 - point;
+        let a_x = a[0] * a[2];
+        let a_y = a[1] * a[2];
+        let b_x = b[0] * b[2];
+        let b_y = b[1] * b[2];
+        let c_x = c[0] * c[2];
+        let c_y = c[1] * c[2];
+        let u = c_x * b_y - c_y * b_x;
+        let v = a_x * c_y - a_y * c_x;
+        let w = b_x * a_y - b_y * a_x;
+
+        if (u < 0. || v < 0. || w < 0.) && (u > 0. || v > 0. || w > 0.) {
+            return None;
+        }
+
+        let det = u + v + w;
+        if approx_eq!(f32, det, 0., ulps = 3) {
+            return None;
+        }
+
+        let t = u * a[2] + v * b[2] + w * c[2];
+        let rcp_det = 1.0 / det;
+        let hit = point[2] + (t * rcp_det);
+        return Some(hit);
     }
 
     pub fn bbox(self) -> Line3d {
@@ -796,7 +823,7 @@ pub fn generate_heightmap_chunks(
         let len = test[0].len();
         let tris = intersect_tris(
             &partition[column],
-            &test.iter().flat_map(|x| x).copied().collect::<Vec<_>>(),
+            &test.iter().flatten().copied().collect::<Vec<_>>(),
             &vk,
         )
         .unwrap();
@@ -922,9 +949,9 @@ pub fn intersect_tris_fallback(tris: &[Triangle3d], points: &[Point3d]) -> Vec<P
             Point3d::new(
                 point.pos.x,
                 point.pos.y,
-                tris.iter()
+                tris.par_iter()
                     .filter_map(|tri| tri.intersect_ray(*point))
-                    .fold(f32::NAN, |acc, x| f32::max(acc, x.pos.z)),
+                    .reduce(|| f32::NAN, f32::max),
             )
         })
         .collect()
@@ -940,4 +967,14 @@ pub fn partition_tris_fallback(tris: &[Triangle3d], columns: &[Line3d]) -> Vec<V
                 .collect::<Vec<_>>()
         })
         .collect()
+}
+
+pub fn to_point_cloud(tris: &Vec<Point3d>) -> String {
+    let mut out = tris
+        .par_iter()
+        .map(|point| format!("{:.3} {:.3} {:.3}\n", point.pos.x, point.pos.y, point.pos.z))
+        .collect::<Vec<String>>();
+    out.sort();
+    out.dedup();
+    out.join("")
 }
