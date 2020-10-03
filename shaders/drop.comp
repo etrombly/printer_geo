@@ -66,7 +66,7 @@ void main() {
     // idy is point array index
     uint idy = gl_GlobalInvocationID.y;
     // because local workgroup size is 32x32 and input may not be evenly divisible need to check the length
-    if (idx <= tris.tri.length() && idy <= points.point.length()){
+    if (idx < tris.tri.length() && idy < points.point.length()){
         int hit = 0;
         // convert from floats to vecs
         vec3 origin = vec3(points.point[idy].x, points.point[idy].y, float(points.point[idy].z) / 1000);
