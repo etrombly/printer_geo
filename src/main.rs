@@ -3,7 +3,11 @@ use rayon::prelude::*;
 use std::{fs::File, io::Write};
 
 fn main() {
-    let vk = unsafe { Vk::new() };
+    let vk = unsafe { Vk::new().unwrap() };
+    let tris = vec![Triangle3d::new((1., 1., 1.), (3., 3., 1.), (1., 3., 1.))];
+    let points = vec![Point3d::new(1.5, 1.5, 1.5)];
+    let intersect = intersect_tris(&tris, &points, &vk).unwrap();
+    println!("{:?}", intersect);
     //let mut grid = Vec::new();
     //let one = Point3d::new(0., 0., -1.);
     //let zero = Point3d::new(0., 0., 0.);

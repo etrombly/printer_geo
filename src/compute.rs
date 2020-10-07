@@ -8,8 +8,10 @@ use ash::{
     util::*,
     vk,
     vk::{
-        DescriptorPoolCreateInfo, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateInfo, DescriptorType,
-        PhysicalDeviceMemoryProperties, Queue, ShaderStageFlags, WriteDescriptorSet,
+        CommandBuffer, CommandBufferBeginInfo, CommandBufferResetFlags, CommandBufferUsageFlags, DescriptorBufferInfo,
+        DescriptorPoolCreateInfo, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateInfo, DescriptorType, Fence,
+        PhysicalDeviceMemoryProperties, PipelineShaderStageCreateInfo, Queue, ShaderStageFlags, SubmitInfo,
+        WriteDescriptorSet,PipelineBindPoint,
     },
     Device, Entry, Instance,
 };
@@ -81,6 +83,8 @@ pub struct Vk {
     pub device: Device,
     pub device_memory_properties: PhysicalDeviceMemoryProperties,
     pub queue: Queue,
+    pub intersect_command_buffer: CommandBuffer,
+    pub intersect_command_reuse_fence: Fence,
     /*pub debug_callback: Option<DebugCallback>,
      *cp: Arc<ComputePipeline<PipelineLayout<drop::Layout>>>, */
 }
@@ -154,8 +158,8 @@ impl Vk {
 
         let fence_create_info = vk::FenceCreateInfo::builder().flags(vk::FenceCreateFlags::SIGNALED);
 
-        let intersect_commands_reuse_fence = device.create_fence(&fence_create_info, None)?;
-        let partition_commands_reuse_fence = device.create_fence(&fence_create_info, None)?;
+        let intersect_command_reuse_fence = device.create_fence(&fence_create_info, None)?;
+        let partition_command_reuse_fence = device.create_fence(&fence_create_info, None)?;
         /*
         let instance = Instance::new(None, &InstanceExtensions::none(), None)?;
         let physical = PhysicalDevice::enumerate(&instance)
@@ -190,6 +194,8 @@ impl Vk {
             device,
             device_memory_properties,
             queue,
+            intersect_command_buffer,
+            intersect_command_reuse_fence,
         })
     }
 
@@ -421,16 +427,16 @@ pub fn intersect_tris(tris: &[Triangle3d], points: &[Point3d], vk: &Vk) -> Resul
     // TODO: this alignment isn't right
     let mut point_slice = unsafe { Align::new(point_ptr, align_of::<u32>() as u64, point_buffer_memory_req.size) };
     point_slice.copy_from_slice(&points);
-    unsafe { vk.device.unmap_memory(point_buffer_memory) };
-    unsafe { vk.device.bind_buffer_memory(point_buffer, point_buffer_memory, 0)? };
+    unsafe { vk.device.unmap_memory(point_buffer_memory) ;
+    vk.device.bind_buffer_memory(point_buffer, point_buffer_memory, 0)? };
 
-    let tri_buffer_descriptor = vk::DescriptorBufferInfo {
+    let tri_buffer_descriptor = DescriptorBufferInfo {
         buffer: tri_buffer,
         offset: 0,
         range: mem::size_of_val(&tris) as u64,
     };
 
-    let point_buffer_descriptor = vk::DescriptorBufferInfo {
+    let point_buffer_descriptor = DescriptorBufferInfo {
         buffer: point_buffer,
         offset: 0,
         range: mem::size_of_val(&points) as u64,
@@ -459,14 +465,65 @@ pub fn intersect_tris(tris: &[Triangle3d], points: &[Point3d], vk: &Vk) -> Resul
     let drop_code = read_spv(&mut drop_spv_file)?;
     let drop_shader_info = vk::ShaderModuleCreateInfo::builder().code(&drop_code);
 
-    let vertex_shader_module = unsafe { vk.device.create_shader_module(&drop_shader_info, None)? };
+    let drop_shader_module = unsafe { vk.device.create_shader_module(&drop_shader_info, None)? };
 
     let layout_create_info = vk::PipelineLayoutCreateInfo::builder().set_layouts(&desc_set_layouts);
 
     let pipeline_layout = unsafe { vk.device.create_pipeline_layout(&layout_create_info, None)? };
 
-    let shader_entry_name = CString::new("main")?;
+    let drop_entry_name = CString::new("main")?;
 
+    let shader_stage_create_infos = [PipelineShaderStageCreateInfo {
+        module: drop_shader_module,
+        p_name: drop_entry_name.as_ptr(),
+        stage: ShaderStageFlags::COMPUTE,
+        ..Default::default()
+    }];
+
+    let command_buffer_begin_info = CommandBufferBeginInfo::builder().flags(CommandBufferUsageFlags::ONE_TIME_SUBMIT);
+    let command_buffers = vec![vk.intersect_command_buffer];
+    let submit_info = SubmitInfo::builder().command_buffers(&command_buffers);
+    let mut buffer_barrier: Vec<vk::BufferMemoryBarrier> = Vec::new();
+    /*
+    buffer_barrier.push(
+        vk::BufferMemoryBarrier::builder()
+            .src_access_mask(vk::AccessFlags::SHADER_WRITE)
+            .dst_access_mask(vk::AccessFlags::SHADER_READ)
+            .buffer(vk.intersect_command_buffer)
+            .size(vk::WHOLE_SIZE)
+            .build(),
+    );
+    */
+    unsafe {
+        vk.device.cmd_bind_pipeline(vk.intersect_command_buffer, PipelineBindPoint::COMPUTE, pipeline);
+        vk.device.cmd_pipeline_barrier(
+            vk.intersect_command_buffer,
+            vk::PipelineStageFlags::COMPUTE_SHADER,
+            vk::PipelineStageFlags::COMPUTE_SHADER,
+            vk::DependencyFlags::empty(),
+            &[],
+            &buffer_barrier,
+            &[],
+        );
+        vk.device
+            .wait_for_fences(&[vk.intersect_command_reuse_fence], true, std::u64::MAX)?;
+        vk.device.reset_fences(&[vk.intersect_command_reuse_fence])?;
+        vk.device
+            .reset_command_buffer(vk.intersect_command_buffer, CommandBufferResetFlags::RELEASE_RESOURCES)?;
+        vk.device
+            .begin_command_buffer(vk.intersect_command_buffer, &command_buffer_begin_info)?;
+        vk.device
+            .queue_submit(vk.queue, &[submit_info.build()], vk.intersect_command_reuse_fence)?;
+        vk.device.cmd_dispatch(
+            vk.intersect_command_buffer,
+            (tris.len() as u32 / 32) + 1,
+            (points.len() as u32 / 32) + 1,
+            1,
+        );
+        vk.device.end_command_buffer(vk.intersect_command_buffer)?;
+        vk.device
+            .wait_for_fences(&[vk.intersect_command_reuse_fence], true, std::u64::MAX)?;
+    }
     /*
     // load compute shader
     let compute_pipeline = vk.cp.clone();
