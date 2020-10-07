@@ -11,6 +11,7 @@ use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::{Ordering, PartialEq},
+    fmt,
     ops::{Add, Index, Mul, Sub},
 };
 use ultraviolet::{Vec2, Vec3};
@@ -37,6 +38,12 @@ impl Point3d {
     pub fn cross(&self, other: &Point3d) -> Point3d { self.pos.cross(other.pos).into() }
 
     pub fn dot(&self, other: &Point3d) -> f32 { self.pos.dot(other.pos) }
+}
+
+impl fmt::Display for Point3d {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Point3d{{x:{}, y:{}, z:{}}}", self[0], self[1], self[2])
+    }
 }
 
 impl Index<usize> for Point3d {

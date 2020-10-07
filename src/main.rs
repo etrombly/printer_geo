@@ -3,14 +3,15 @@ use rayon::prelude::*;
 use std::{fs::File, io::Write};
 
 fn main() {
-    let mut grid = Vec::new();
-    let one = Point3d::new(0., 0., -1.);
-    let zero = Point3d::new(0., 0., 0.);
-    grid.push(vec![one, one, zero, zero, zero, zero]);
-    grid.push(vec![one, one, zero, zero, zero, zero]);
-    grid.push(vec![zero, zero, zero, zero, zero, one]);
-    let islands = get_islands(&grid, -0.1);
-    println!("{:?}", islands);
+    let vk = Vk::new();
+    //let mut grid = Vec::new();
+    //let one = Point3d::new(0., 0., -1.);
+    //let zero = Point3d::new(0., 0., 0.);
+    //grid.push(vec![one, one, zero, zero, zero, zero]);
+    //grid.push(vec![one, one, zero, zero, zero, zero]);
+    //grid.push(vec![zero, zero, zero, zero, zero, one]);
+    //let islands = get_islands(&grid, -0.1);
+    //println!("{:?}", islands);
     //let tri = Triangle3d::new((0., 0., 1.), (4., 4., 1.), (3., 3., 1.));
     //let bounds = Line3d::new((1., 1., 1.), (2., 2., 1.));
     //assert!(tri.in_2d_bounds(&bounds));
