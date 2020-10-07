@@ -3,7 +3,7 @@ use rayon::prelude::*;
 use std::{fs::File, io::Write};
 
 fn main() {
-    let vk = Vk::new();
+    let vk = unsafe { Vk::new() };
     //let mut grid = Vec::new();
     //let one = Point3d::new(0., 0., -1.);
     //let zero = Point3d::new(0., 0., 0.);

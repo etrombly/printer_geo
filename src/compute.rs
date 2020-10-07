@@ -4,10 +4,24 @@
 
 pub use crate::geo::*;
 pub use ash::version::{DeviceV1_0, EntryV1_0, InstanceV1_0};
-use ash::{vk, vk::Queue, Device, Entry, Instance};
+use ash::{
+    util::*,
+    vk,
+    vk::{
+        DescriptorPoolCreateInfo, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateInfo, DescriptorType,
+        PhysicalDeviceMemoryProperties, Queue, ShaderStageFlags, WriteDescriptorSet,
+    },
+    Device, Entry, Instance,
+};
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
-use std::sync::Arc;
+use std::{
+    ffi::CString,
+    io::Cursor,
+    mem::{self, align_of},
+    os::raw::c_void,
+    sync::Arc,
+};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -19,23 +33,23 @@ pub enum VkError {
     Instance(#[from] ash::InstanceError),
     #[error("Vulkan error")]
     VkResult(#[from] ash::vk::Result),
-    #[error("Vulkan graphics error")]
+    #[error("Vulkan error")]
     Graphics,
     #[error("Could not create vulkan device")]
     Device,
-    /* not create vulkan device")] */
-    /*Device(#[from] vulkano::device::DeviceCreationError), */
-    /* to create compute shader")] */
-    /*Shader(#[from] vulkano::OomError), */
-    /* to create compute pipeline")] */
-    /*Pipeline(#[from] vulkano::pipeline::ComputePipelineCreationError), */
-    /* queue available for vulkan device")] */
-    /* Queue, */
 }
 
 #[derive(Error, Debug)]
 /// Error types for vulkan compute operations
 pub enum ComputeError {
+    #[error("Vulkan error")]
+    VkResult(#[from] ash::vk::Result),
+    #[error("Unable to find suitable memory type")]
+    MemoryType,
+    #[error("Null string")]
+    Nul(#[from] std::ffi::NulError),
+    #[error("IO error")]
+    IO(#[from] std::io::Error),
     //#[error("Failed to create compute shader")]
     //Shader(#[from] vulkano::OomError),
     //#[error("Failed to create compute pipeline")]
@@ -65,6 +79,7 @@ pub enum ComputeError {
 pub struct Vk {
     pub instance: Instance,
     pub device: Device,
+    pub device_memory_properties: PhysicalDeviceMemoryProperties,
     pub queue: Queue,
     /*pub debug_callback: Option<DebugCallback>,
      *cp: Arc<ComputePipeline<PipelineLayout<drop::Layout>>>, */
@@ -72,7 +87,7 @@ pub struct Vk {
 
 impl Vk {
     /// Create a new vulkan instance
-    pub fn new() -> Result<Vk, VkError> {
+    pub unsafe fn new() -> Result<Vk, VkError> {
         let entry = Entry::new()?;
         let app_info = vk::ApplicationInfo {
             api_version: vk::make_version(1, 0, 0),
@@ -82,32 +97,30 @@ impl Vk {
             p_application_info: &app_info,
             ..Default::default()
         };
-        let instance = unsafe { entry.create_instance(&create_info, None)? };
-        let pdevices = unsafe {instance.enumerate_physical_devices()?};
+        let instance = entry.create_instance(&create_info, None)?;
+        let pdevices = instance.enumerate_physical_devices()?;
         let (pdevice, queue_family_index) = pdevices
             .iter()
             .map(|pdevice| {
-                unsafe{
                 instance
                     .get_physical_device_queue_family_properties(*pdevice)
                     .iter()
                     .enumerate()
-                    .filter_map(|(index, ref info)| 
-                    if info.queue_flags.contains(vk::QueueFlags::COMPUTE) {
-                        Some((*pdevice, index))
-                    } else {
-                        None
+                    .filter_map(|(index, ref info)| {
+                        if info.queue_flags.contains(vk::QueueFlags::COMPUTE) {
+                            Some((*pdevice, index))
+                        } else {
+                            None
+                        }
                     })
-                    .next()}
+                    .next()
             })
             .filter_map(|v| v)
             .next()
             .ok_or(VkError::Device)?;
         let queue_family_index = queue_family_index as u32;
         let device_extension_names_raw = [];
-        let features = vk::PhysicalDeviceFeatures {
-            ..Default::default()
-        };
+        let features = vk::PhysicalDeviceFeatures { ..Default::default() };
         let priorities = [1.0];
 
         let queue_info = [vk::DeviceQueueCreateInfo::builder()
@@ -120,9 +133,29 @@ impl Vk {
             .enabled_extension_names(&device_extension_names_raw)
             .enabled_features(&features);
 
-        let device: Device = unsafe{ instance.create_device(pdevice, &device_create_info, None)?};
+        let device: Device = instance.create_device(pdevice, &device_create_info, None)?;
+        let device_memory_properties = instance.get_physical_device_memory_properties(pdevice);
 
-        let queue = unsafe{ device.get_device_queue(queue_family_index as u32, 0) };
+        let queue = device.get_device_queue(queue_family_index as u32, 0);
+        let pool_create_info = vk::CommandPoolCreateInfo::builder()
+            .flags(vk::CommandPoolCreateFlags::RESET_COMMAND_BUFFER)
+            .queue_family_index(queue_family_index);
+
+        let pool = device.create_command_pool(&pool_create_info, None)?;
+
+        let command_buffer_allocate_info = vk::CommandBufferAllocateInfo::builder()
+            .command_buffer_count(2)
+            .command_pool(pool)
+            .level(vk::CommandBufferLevel::PRIMARY);
+
+        let command_buffers = device.allocate_command_buffers(&command_buffer_allocate_info)?;
+        let intersect_command_buffer = command_buffers[0];
+        let partition_command_buffer = command_buffers[1];
+
+        let fence_create_info = vk::FenceCreateInfo::builder().flags(vk::FenceCreateFlags::SIGNALED);
+
+        let intersect_commands_reuse_fence = device.create_fence(&fence_create_info, None)?;
+        let partition_commands_reuse_fence = device.create_fence(&fence_create_info, None)?;
         /*
         let instance = Instance::new(None, &InstanceExtensions::none(), None)?;
         let physical = PhysicalDevice::enumerate(&instance)
@@ -152,7 +185,12 @@ impl Vk {
         )?);
         */
 
-        Ok(Vk { instance, device, queue })
+        Ok(Vk {
+            instance,
+            device,
+            device_memory_properties,
+            queue,
+        })
     }
 
     /*
@@ -278,11 +316,157 @@ impl Drop for Vk {
 /// * `tris` - Model to calculate intersections
 /// * `points` - List of points to intersect
 /// * `vk` - Vulkan instance
-pub fn intersect_tris(
-    tris: &[Triangle3d],
-    points: &[Point3d],
-    vk: &Vk,
-) -> Result<Vec<Point3d>, ComputeError> {
+pub fn intersect_tris(tris: &[Triangle3d], points: &[Point3d], vk: &Vk) -> Result<Vec<Point3d>, ComputeError> {
+    let descriptor_sizes = [
+        vk::DescriptorPoolSize {
+            ty: DescriptorType::STORAGE_BUFFER,
+            descriptor_count: 1,
+        },
+        vk::DescriptorPoolSize {
+            ty: DescriptorType::STORAGE_BUFFER,
+            descriptor_count: 1,
+        },
+    ];
+    let descriptor_pool_info = DescriptorPoolCreateInfo::builder()
+        .pool_sizes(&descriptor_sizes)
+        .max_sets(1);
+
+    let descriptor_pool = unsafe { vk.device.create_descriptor_pool(&descriptor_pool_info, None)? };
+    let desc_layout_bindings = [
+        DescriptorSetLayoutBinding {
+            descriptor_type: DescriptorType::STORAGE_BUFFER,
+            descriptor_count: 1,
+            stage_flags: ShaderStageFlags::COMPUTE,
+            ..Default::default()
+        },
+        DescriptorSetLayoutBinding {
+            binding: 1,
+            descriptor_type: DescriptorType::STORAGE_BUFFER,
+            descriptor_count: 1,
+            stage_flags: ShaderStageFlags::COMPUTE,
+            ..Default::default()
+        },
+    ];
+    let descriptor_info = DescriptorSetLayoutCreateInfo::builder().bindings(&desc_layout_bindings);
+
+    let desc_set_layouts = unsafe { [vk.device.create_descriptor_set_layout(&descriptor_info, None)?] };
+
+    let desc_alloc_info = vk::DescriptorSetAllocateInfo::builder()
+        .descriptor_pool(descriptor_pool)
+        .set_layouts(&desc_set_layouts);
+    let descriptor_sets = unsafe { vk.device.allocate_descriptor_sets(&desc_alloc_info)? };
+
+    let tri_buffer_info = vk::BufferCreateInfo {
+        size: std::mem::size_of_val(&tris) as u64,
+        usage: vk::BufferUsageFlags::STORAGE_BUFFER,
+        sharing_mode: vk::SharingMode::EXCLUSIVE,
+        ..Default::default()
+    };
+    let tri_buffer = unsafe { vk.device.create_buffer(&tri_buffer_info, None)? };
+    let tri_buffer_memory_req = unsafe { vk.device.get_buffer_memory_requirements(tri_buffer) };
+    let tri_buffer_memory_index = find_memorytype_index(
+        &tri_buffer_memory_req,
+        &vk.device_memory_properties,
+        vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
+    )
+    .ok_or(ComputeError::MemoryType)?;
+    let tri_allocate_info = vk::MemoryAllocateInfo {
+        allocation_size: tri_buffer_memory_req.size,
+        memory_type_index: tri_buffer_memory_index,
+        ..Default::default()
+    };
+    let tri_buffer_memory = unsafe { vk.device.allocate_memory(&tri_allocate_info, None)? };
+    let tri_ptr: *mut c_void = unsafe {
+        vk.device.map_memory(
+            tri_buffer_memory,
+            0,
+            tri_buffer_memory_req.size,
+            vk::MemoryMapFlags::empty(),
+        )?
+    };
+    // TODO: this alignment isn't right
+    let mut tri_slice = unsafe { Align::new(tri_ptr, align_of::<u32>() as u64, tri_buffer_memory_req.size) };
+    tri_slice.copy_from_slice(&tris);
+    unsafe { vk.device.unmap_memory(tri_buffer_memory) };
+    unsafe { vk.device.bind_buffer_memory(tri_buffer, tri_buffer_memory, 0)? };
+
+    let point_buffer_info = vk::BufferCreateInfo {
+        size: std::mem::size_of_val(&points) as u64,
+        usage: vk::BufferUsageFlags::STORAGE_BUFFER,
+        sharing_mode: vk::SharingMode::EXCLUSIVE,
+        ..Default::default()
+    };
+    let point_buffer = unsafe { vk.device.create_buffer(&point_buffer_info, None)? };
+    let point_buffer_memory_req = unsafe { vk.device.get_buffer_memory_requirements(point_buffer) };
+    let point_buffer_memory_index = find_memorytype_index(
+        &point_buffer_memory_req,
+        &vk.device_memory_properties,
+        vk::MemoryPropertyFlags::HOST_VISIBLE | vk::MemoryPropertyFlags::HOST_COHERENT,
+    )
+    .ok_or(ComputeError::MemoryType)?;
+    let point_allocate_info = vk::MemoryAllocateInfo {
+        allocation_size: point_buffer_memory_req.size,
+        memory_type_index: point_buffer_memory_index,
+        ..Default::default()
+    };
+    let point_buffer_memory = unsafe { vk.device.allocate_memory(&point_allocate_info, None)? };
+    let point_ptr: *mut c_void = unsafe {
+        vk.device.map_memory(
+            point_buffer_memory,
+            0,
+            point_buffer_memory_req.size,
+            vk::MemoryMapFlags::empty(),
+        )?
+    };
+    // TODO: this alignment isn't right
+    let mut point_slice = unsafe { Align::new(point_ptr, align_of::<u32>() as u64, point_buffer_memory_req.size) };
+    point_slice.copy_from_slice(&points);
+    unsafe { vk.device.unmap_memory(point_buffer_memory) };
+    unsafe { vk.device.bind_buffer_memory(point_buffer, point_buffer_memory, 0)? };
+
+    let tri_buffer_descriptor = vk::DescriptorBufferInfo {
+        buffer: tri_buffer,
+        offset: 0,
+        range: mem::size_of_val(&tris) as u64,
+    };
+
+    let point_buffer_descriptor = vk::DescriptorBufferInfo {
+        buffer: point_buffer,
+        offset: 0,
+        range: mem::size_of_val(&points) as u64,
+    };
+
+    let write_desc_sets = [
+        WriteDescriptorSet {
+            dst_set: descriptor_sets[0],
+            descriptor_count: 1,
+            descriptor_type: DescriptorType::STORAGE_BUFFER,
+            p_buffer_info: &tri_buffer_descriptor,
+            ..Default::default()
+        },
+        WriteDescriptorSet {
+            dst_set: descriptor_sets[0],
+            dst_binding: 1,
+            descriptor_count: 1,
+            descriptor_type: DescriptorType::STORAGE_BUFFER,
+            p_buffer_info: &point_buffer_descriptor,
+            ..Default::default()
+        },
+    ];
+    unsafe { vk.device.update_descriptor_sets(&write_desc_sets, &[]) };
+
+    let mut drop_spv_file = Cursor::new(&include_bytes!("../shaders/drop.spv")[..]);
+    let drop_code = read_spv(&mut drop_spv_file)?;
+    let drop_shader_info = vk::ShaderModuleCreateInfo::builder().code(&drop_code);
+
+    let vertex_shader_module = unsafe { vk.device.create_shader_module(&drop_shader_info, None)? };
+
+    let layout_create_info = vk::PipelineLayoutCreateInfo::builder().set_layouts(&desc_set_layouts);
+
+    let pipeline_layout = unsafe { vk.device.create_pipeline_layout(&layout_create_info, None)? };
+
+    let shader_entry_name = CString::new("main")?;
+
     /*
     // load compute shader
     let compute_pipeline = vk.cp.clone();
@@ -531,3 +715,37 @@ mod partition {
     }
 }
 */
+
+pub fn find_memorytype_index(
+    memory_req: &vk::MemoryRequirements,
+    memory_prop: &vk::PhysicalDeviceMemoryProperties,
+    flags: vk::MemoryPropertyFlags,
+) -> Option<u32> {
+    // Try to find an exactly matching memory flag
+    let best_suitable_index = find_memorytype_index_f(memory_req, memory_prop, flags, |property_flags, flags| {
+        property_flags == flags
+    });
+    if best_suitable_index.is_some() {
+        return best_suitable_index;
+    }
+    // Otherwise find a memory flag that works
+    find_memorytype_index_f(memory_req, memory_prop, flags, |property_flags, flags| {
+        property_flags & flags == flags
+    })
+}
+
+pub fn find_memorytype_index_f<F: Fn(vk::MemoryPropertyFlags, vk::MemoryPropertyFlags) -> bool>(
+    memory_req: &vk::MemoryRequirements,
+    memory_prop: &vk::PhysicalDeviceMemoryProperties,
+    flags: vk::MemoryPropertyFlags,
+    f: F,
+) -> Option<u32> {
+    let mut memory_type_bits = memory_req.memory_type_bits;
+    for (index, ref memory_type) in memory_prop.memory_types.iter().enumerate() {
+        if memory_type_bits & 1 == 1 && f(memory_type.property_flags, flags) {
+            return Some(index as u32);
+        }
+        memory_type_bits >>= 1;
+    }
+    None
+}

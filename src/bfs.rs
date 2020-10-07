@@ -1,22 +1,9 @@
 use crate::geo::Point3d;
 /// modified from https://www.quora.com/What-is-an-efficient-algorithm-to-find-an-island-of-connected-1s-in-a-matrix-of-0s-and-1s
 
-const SIBLINGS: [(i32, i32); 8] = [
-    (-1, -1),
-    (0, -1),
-    (1, -1),
-    (-1, 0),
-    (1, 0),
-    (-1, 1),
-    (0, 1),
-    (1, 1),
-];
+const SIBLINGS: [(i32, i32); 8] = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)];
 
-pub fn bfs(
-    node: (usize, usize),
-    visited: &mut Visited,
-    data: &[Vec<Point3d>],
-) -> Option<Vec<(usize, usize)>> {
+pub fn bfs(node: (usize, usize), visited: &mut Visited, data: &[Vec<Point3d>]) -> Option<Vec<(usize, usize)>> {
     if visited.visited(node.0, node.1) {
         return None;
     }
@@ -76,8 +63,7 @@ pub struct Visited {
 
 impl Visited {
     pub fn new(columns: usize, rows: usize) -> Visited {
-        let count =
-            ((columns as f32 - 1.) + ((rows as f32 - 1.) * columns as f32) / 32.).ceil() as usize;
+        let count = ((columns as f32 - 1.) + ((rows as f32 - 1.) * columns as f32) / 32.).ceil() as usize;
         let mask: Vec<u32> = (0..count).map(|_| 0_u32).collect();
         Visited { columns, mask }
     }
