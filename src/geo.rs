@@ -13,6 +13,7 @@ use std::{
     cmp::{Ordering, PartialEq},
     fmt,
     ops::{Add, Index, Mul, Sub},
+    rc::Rc,
 };
 use ultraviolet::{Vec2, Vec3};
 
@@ -791,18 +792,18 @@ pub fn generate_columns_chunks(bounds: &Line3d, scale: &f32) -> Vec<Line3d> {
         .collect()
 }
 
-pub fn generate_heightmap(grid: &[Vec<Point3d>], partition: &[Vec<Triangle3d>], vk: &Vk) -> Vec<Vec<Point3d>> {
+pub fn generate_heightmap(grid: &[Vec<Point3d>], partition: &[Vec<Triangle3d>], vk: Rc<Vk>) -> Vec<Vec<Point3d>> {
     grid.iter()
         .enumerate()
         .map(|(column, test)| {
             // ray cast on the GPU to figure out the highest point for each point in this
             // column
-            intersect_tris(&partition[column], &test, &vk).unwrap()
+            intersect_tris(&partition[column], &test, vk.clone()).unwrap()
         })
         .collect()
 }
 
-pub fn generate_heightmap_chunks(grid: &[Vec<Point3d>], partition: &[Vec<Triangle3d>], vk: &Vk) -> Vec<Vec<Point3d>> {
+pub fn generate_heightmap_chunks(grid: &[Vec<Point3d>], partition: &[Vec<Triangle3d>], vk: Rc<Vk>) -> Vec<Vec<Point3d>> {
     let mut result = Vec::with_capacity(grid.len());
     for (column, test) in grid.chunks(10).enumerate() {
         // ray cast on the GPU to figure out the highest point for each point in this
@@ -812,7 +813,7 @@ pub fn generate_heightmap_chunks(grid: &[Vec<Point3d>], partition: &[Vec<Triangl
         let tris = intersect_tris(
             &partition[column],
             &test.iter().flatten().copied().collect::<Vec<_>>(),
-            &vk,
+            vk.clone(),
         )
         .unwrap();
         for chunk in tris.chunks(len) {

@@ -15,6 +15,7 @@ use ash::{
     },
     Device, Entry, Instance,
 };
+use ash::vk::CommandPool;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 use std::{
@@ -22,7 +23,7 @@ use std::{
     io::Cursor,
     mem::{self, align_of},
     os::raw::c_void,
-    sync::Arc,
+    rc::Rc,
 };
 use thiserror::Error;
 
@@ -83,6 +84,7 @@ pub struct Vk {
     pub device: Device,
     pub device_memory_properties: PhysicalDeviceMemoryProperties,
     pub queue: Queue,
+    pub pool: CommandPool,
     pub intersect_command_buffer: CommandBuffer,
     pub intersect_command_reuse_fence: Fence,
     /*pub debug_callback: Option<DebugCallback>,
@@ -154,12 +156,12 @@ impl Vk {
 
         let command_buffers = device.allocate_command_buffers(&command_buffer_allocate_info)?;
         let intersect_command_buffer = command_buffers[0];
-        let partition_command_buffer = command_buffers[1];
+        //let partition_command_buffer = command_buffers[1];
 
         let fence_create_info = vk::FenceCreateInfo::builder().flags(vk::FenceCreateFlags::SIGNALED);
 
         let intersect_command_reuse_fence = device.create_fence(&fence_create_info, None)?;
-        let partition_command_reuse_fence = device.create_fence(&fence_create_info, None)?;
+        //let partition_command_reuse_fence = device.create_fence(&fence_create_info, None)?;
         /*
         let instance = Instance::new(None, &InstanceExtensions::none(), None)?;
         let physical = PhysicalDevice::enumerate(&instance)
@@ -194,6 +196,7 @@ impl Vk {
             device,
             device_memory_properties,
             queue,
+            pool,
             intersect_command_buffer,
             intersect_command_reuse_fence,
         })
@@ -283,7 +286,6 @@ impl Vk {
     */
 }
 
-/*
 impl Drop for Vk {
     fn drop(&mut self) {
         unsafe {
@@ -292,8 +294,8 @@ impl Drop for Vk {
             //    .destroy_semaphore(self.present_complete_semaphore, None);
             //self.device
             //    .destroy_semaphore(self.rendering_complete_semaphore, None);
-            //self.device
-            //    .destroy_fence(self.draw_commands_reuse_fence, None);
+            self.device
+                .destroy_fence(self.intersect_command_reuse_fence, None);
             //self.device
             //    .destroy_fence(self.setup_commands_reuse_fence, None);
             //self.device.free_memory(self.depth_image_memory, None);
@@ -302,10 +304,10 @@ impl Drop for Vk {
             //for &image_view in self.present_image_views.iter() {
             //    self.device.destroy_image_view(image_view, None);
             //}
-            //self.device.destroy_command_pool(self.pool, None);
+        self.device.destroy_command_pool(self.pool, None);
             //self.swapchain_loader
             //    .destroy_swapchain(self.swapchain, None);
-        //self.device.destroy_device(None);
+        self.device.destroy_device(None);
             //self.surface_loader.destroy_surface(self.surface, None);
             //self.debug_utils_loader
             //    .destroy_debug_utils_messenger(self.debug_call_back, None);
@@ -313,7 +315,6 @@ impl Drop for Vk {
         }
     }
 }
-*/
 
 /// Calculate intersection of points and triangles
 ///
@@ -322,7 +323,7 @@ impl Drop for Vk {
 /// * `tris` - Model to calculate intersections
 /// * `points` - List of points to intersect
 /// * `vk` - Vulkan instance
-pub fn intersect_tris(tris: &[Triangle3d], points: &[Point3d], vk: &Vk) -> Result<Vec<Point3d>, ComputeError> {
+pub fn intersect_tris(tris: &[Triangle3d], points: &[Point3d], vk: Rc<Vk>) -> Result<Vec<Point3d>, ComputeError> {
     let descriptor_sizes = [
         vk::DescriptorPoolSize {
             ty: DescriptorType::STORAGE_BUFFER,
@@ -495,6 +496,7 @@ pub fn intersect_tris(tris: &[Triangle3d], points: &[Point3d], vk: &Vk) -> Resul
     );
     */
     unsafe {
+        /*
         vk.device.cmd_bind_pipeline(vk.intersect_command_buffer, PipelineBindPoint::COMPUTE, pipeline);
         vk.device.cmd_pipeline_barrier(
             vk.intersect_command_buffer,
@@ -523,6 +525,7 @@ pub fn intersect_tris(tris: &[Triangle3d], points: &[Point3d], vk: &Vk) -> Resul
         vk.device.end_command_buffer(vk.intersect_command_buffer)?;
         vk.device
             .wait_for_fences(&[vk.intersect_command_reuse_fence], true, std::u64::MAX)?;
+            */
     }
     /*
     // load compute shader
