@@ -461,7 +461,7 @@ pub fn intersect_tris(tris: &[Triangle3d], points: &[Point3d], vk: &Vk) -> Resul
     ];
     unsafe { vk.device.update_descriptor_sets(&write_desc_sets, &[]) };
 
-    let mut drop_spv_file = Cursor::new(&include_bytes!("../shaders/drop.spv")[..]);
+    let mut drop_spv_file = Cursor::new(&include_bytes!("../../shaders/drop.spv")[..]);
     let drop_code = read_spv(&mut drop_spv_file)?;
     let drop_shader_info = vk::ShaderModuleCreateInfo::builder().code(&drop_code);
 

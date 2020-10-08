@@ -3,7 +3,7 @@
 //! Collection of geometric types and functions useful for 3d models and CAM
 //! mostly wraps ultraviolet types with some additional functionality
 
-use crate::compute::{intersect_tris, Vk};
+use crate::vulkan::compute::{intersect_tris, Vk};
 use float_cmp::approx_eq;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
