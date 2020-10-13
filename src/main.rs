@@ -1,17 +1,22 @@
-use printer_geo::{bfs::*, vulkan::compute::*, geo::*, stl::*};
+use printer_geo::{bfs::*, geo::*, stl::*, vulkan::*};
 use rayon::prelude::*;
+use simplelog::*;
 use std::{fs::File, io::Write, rc::Rc};
 
 fn main() {
-    let vk = unsafe { Rc::new(Vk::new().unwrap()) };
+    CombinedLogger::init(vec![TermLogger::new(
+        LevelFilter::Info,
+        Config::default(),
+        TerminalMode::Mixed,
+    )])
+    .unwrap();
+    let vk = Rc::new(vkstate::init_vulkan().unwrap());
     let tris = vec![Triangle3d::new((1., 1., 1.), (3., 3., 1.), (1., 3., 1.))];
-    let points = vec![Point3d::new(1.5, 1.5, 1.5)];
-    //let intersect = intersect_tris(&tris, &points, vk.clone()).unwrap();
-    //println!("{:?}", intersect);
+    let points = vec![Point3d::new(1.5, 1.5, 0.), Point3d::new(10., 10., 0.)];
 
+    let intersect = compute::intersect_tris(&tris, &points, vk.clone()).unwrap();
+    println!("{:?}", intersect);
 
-
-    
     //let mut grid = Vec::new();
     //let one = Point3d::new(0., 0., -1.);
     //let zero = Point3d::new(0., 0., 0.);

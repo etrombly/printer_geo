@@ -18,12 +18,15 @@ simplesvg = "0.4.0"
 rayon = "1.4.1"
 thiserror = "1.0.21"
 float-cmp = "0.8.0"
-structopt = "0.3.18"
+structopt = "0.3.20"
 clap = "2.33.3"
 ash = "0.31.0"
+rand = "0.7.3"
+log = "0.4.11"
+simplelog = "0.8.0"
 
 [dependencies.ultraviolet]
-version = "0.7.3"
+version = "0.7.4"
 features = ["serde"]
 
 [dependencies.serde]
@@ -31,7 +34,7 @@ version = "1.0.116"
 features =["derive"]
 
 [dependencies.pyo3]
-version = "0.12.1"
+version = "0.12.3"
 features = ["extension-module", "nightly"]
 optional = true
 

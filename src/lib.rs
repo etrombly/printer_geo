@@ -2,9 +2,9 @@
 use pyo3::{prelude::*, wrap_pymodule};
 
 pub mod bfs;
-pub mod vulkan;
 pub mod config;
 pub mod geo;
+pub mod vulkan;
 //pub mod geo_vulkan;
 #[cfg(feature = "python")]
 pub mod python;

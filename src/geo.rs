@@ -3,7 +3,7 @@
 //! Collection of geometric types and functions useful for 3d models and CAM
 //! mostly wraps ultraviolet types with some additional functionality
 
-use crate::vulkan::compute::{intersect_tris, Vk};
+use crate::vulkan::{compute::intersect_tris, vkstate::VulkanState};
 use float_cmp::approx_eq;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
@@ -792,7 +792,11 @@ pub fn generate_columns_chunks(bounds: &Line3d, scale: &f32) -> Vec<Line3d> {
         .collect()
 }
 
-pub fn generate_heightmap(grid: &[Vec<Point3d>], partition: &[Vec<Triangle3d>], vk: Rc<Vk>) -> Vec<Vec<Point3d>> {
+pub fn generate_heightmap(
+    grid: &[Vec<Point3d>],
+    partition: &[Vec<Triangle3d>],
+    vk: Rc<VulkanState>,
+) -> Vec<Vec<Point3d>> {
     grid.iter()
         .enumerate()
         .map(|(column, test)| {
@@ -803,7 +807,11 @@ pub fn generate_heightmap(grid: &[Vec<Point3d>], partition: &[Vec<Triangle3d>], 
         .collect()
 }
 
-pub fn generate_heightmap_chunks(grid: &[Vec<Point3d>], partition: &[Vec<Triangle3d>], vk: Rc<Vk>) -> Vec<Vec<Point3d>> {
+pub fn generate_heightmap_chunks(
+    grid: &[Vec<Point3d>],
+    partition: &[Vec<Triangle3d>],
+    vk: Rc<VulkanState>,
+) -> Vec<Vec<Point3d>> {
     let mut result = Vec::with_capacity(grid.len());
     for (column, test) in grid.chunks(10).enumerate() {
         // ray cast on the GPU to figure out the highest point for each point in this
