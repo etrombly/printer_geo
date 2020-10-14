@@ -1,16 +1,29 @@
-use printer_geo::{bfs::*, compute::*, geo::*, stl::*};
-use rayon::prelude::*;
-use std::{fs::File, io::Write};
+use printer_geo::{geo::*, vulkan::*};
+use simplelog::*;
+use std::rc::Rc;
 
 fn main() {
-    let mut grid = Vec::new();
-    let one = Point3d::new(0., 0., -1.);
-    let zero = Point3d::new(0., 0., 0.);
-    grid.push(vec![one, one, zero, zero, zero, zero]);
-    grid.push(vec![one, one, zero, zero, zero, zero]);
-    grid.push(vec![zero, zero, zero, zero, zero, one]);
-    let islands = get_islands(&grid, -0.1);
-    println!("{:?}", islands);
+    CombinedLogger::init(vec![TermLogger::new(
+        LevelFilter::Info,
+        Config::default(),
+        TerminalMode::Mixed,
+    )])
+    .unwrap();
+    let vk = Rc::new(vkstate::init_vulkan().unwrap());
+    let tris = vec![Triangle3d::new((1., 1., 1.), (3., 3., 1.), (1., 3., 1.))];
+    let points = vec![Point3d::new(1.5, 1.5, 0.), Point3d::new(10., 10., 0.)];
+
+    let intersect = compute::intersect_tris(&tris, &points, vk.clone()).unwrap();
+    println!("{:?}", intersect);
+
+    //let mut grid = Vec::new();
+    //let one = Point3d::new(0., 0., -1.);
+    //let zero = Point3d::new(0., 0., 0.);
+    //grid.push(vec![one, one, zero, zero, zero, zero]);
+    //grid.push(vec![one, one, zero, zero, zero, zero]);
+    //grid.push(vec![zero, zero, zero, zero, zero, one]);
+    //let islands = get_islands(&grid, -0.1);
+    //println!("{:?}", islands);
     //let tri = Triangle3d::new((0., 0., 1.), (4., 4., 1.), (3., 3., 1.));
     //let bounds = Line3d::new((1., 1., 1.), (2., 2., 1.));
     //assert!(tri.in_2d_bounds(&bounds));

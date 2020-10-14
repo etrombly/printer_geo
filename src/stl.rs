@@ -15,9 +15,7 @@ pub struct Triangle {
     pub attr_byte_count: u16,
 }
 
-fn point_eq(lhs: [f32; 3], rhs: [f32; 3]) -> bool {
-    lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] == rhs[2]
-}
+fn point_eq(lhs: [f32; 3], rhs: [f32; 3]) -> bool { lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] == rhs[2] }
 
 impl PartialEq for Triangle {
     fn eq(&self, rhs: &Triangle) -> bool {
@@ -80,10 +78,7 @@ fn read_header<T: ReadBytesExt>(input: &mut T) -> Result<BinaryStlHeader> {
 
     let num_triangles = input.read_u32::<LittleEndian>()?;
 
-    Ok(BinaryStlHeader {
-        header,
-        num_triangles,
-    })
+    Ok(BinaryStlHeader { header, num_triangles })
 }
 
 pub fn read_stl<T: ReadBytesExt>(input: &mut T) -> Result<BinaryStlFile> {

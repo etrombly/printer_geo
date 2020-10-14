@@ -1,0 +1,102 @@
+#version 450
+
+layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
+
+// using floats instead of a vec3 because vec3 is aligned to 16 bytes
+// this saves 4 bytes per point
+struct Point {
+    float x;
+    float y;
+    float z;
+};
+
+struct Triangle {
+    float p1x;
+    float p1y;
+    float p1z;
+    float p2x;
+    float p2y;
+    float p2z;
+    float p3x;
+    float p3y;
+    float p3z;
+};
+
+struct Line {
+    float p1x;
+    float p1y;
+    float p1z;
+    float p2x;
+    float p2y;
+    float p2z;
+};
+
+layout(std430, set = 0, binding = 0) readonly buffer Triangles {
+    Triangle tri[];
+} tris;
+
+layout(std430, set = 0, binding = 1) readonly buffer Columns {
+    Line line[];
+} columns;
+
+layout(std430, set = 0, binding = 2) coherent buffer Results {
+    uint columns[];
+} results;
+
+// check if line segments intersect
+bool line_intersect(in vec3 rightp1, in vec3 rightp2, in vec3 leftp1, in vec3 leftp2) {
+    float a1 = rightp2[1] - rightp1[1];
+    float b1 = rightp1[0] - rightp2[0];
+    float c1 = a1 * rightp1[0] + b1 * rightp1[1];
+
+    float a2 = leftp2[1] - leftp1[1];
+    float b2 = leftp1[0] - leftp2[0];
+    float c2 = a2 * leftp1[0] + b2 * leftp1[1];
+
+    float delta = a1 * b2 - a2 * b1;
+    float x = (b2 * c1 - b1 * c2) / delta;
+    float y = (a1 * c2 - a2 * c1) / delta;
+    return delta != 0.0 && min(rightp1[0], rightp2[0]) <= x &&
+     x <= max(rightp1[0], rightp2[0]) && 
+     min(rightp1[1],rightp2[1]) <= y && 
+     y <= max(rightp1[1],rightp2[1]);
+}
+
+bool in_column (in vec3 trip1, in vec3 trip2, in vec3 trip3, in vec3 boundsp1, in vec3 boundsp2) {
+    // get the right and left side of bounds
+    vec3 left = vec3(boundsp1[0], boundsp2[1], boundsp1[2]);
+    vec3 right = vec3(boundsp2[0], boundsp1[1], boundsp2[2]);
+    // check if any of the triangle points are in bounds
+    return (trip1[0] >= boundsp1[0] && trip1[0] <= boundsp2[0]) || 
+    (trip2[0] >= boundsp1[0] && trip2[0] <= boundsp2[0]) || 
+    (trip3[0] >= boundsp1[0] && trip3[0] <= boundsp2[0]) ||
+    // check if any of the lines intersect either side of the bounds
+
+    line_intersect(trip1, trip2, boundsp1, left) || line_intersect(trip2, trip3, boundsp1, left) ||
+    line_intersect(trip1, trip3, boundsp1, left) ||
+    line_intersect(trip1, trip2, boundsp2, right) || line_intersect(trip2, trip3, boundsp2, right) ||
+    line_intersect(trip1, trip3, boundsp2, right);
+}
+
+void main() {
+    // idx is the triangle array index
+    uint idx = gl_GlobalInvocationID.x;
+    // idy is the bounding box array index
+    uint idy = gl_GlobalInvocationID.y;
+    // convert from floats to vecs
+    if(idx < tris.tri.length() && idy < columns.line.length()) {
+        vec3 trip1 = vec3(tris.tri[idx].p1x, tris.tri[idx].p1y, tris.tri[idx].p1z);
+        vec3 trip2 = vec3(tris.tri[idx].p2x, tris.tri[idx].p2y, tris.tri[idx].p2z);
+        vec3 trip3 = vec3(tris.tri[idx].p3x, tris.tri[idx].p3y, tris.tri[idx].p3z);
+        vec3 boundsp1 = vec3(columns.line[idy].p1x, columns.line[idy].p1y, columns.line[idy].p1z);
+        vec3 boundsp2 = vec3(columns.line[idy].p2x, columns.line[idy].p2y, columns.line[idy].p2z);
+        // check if current tri is in current column
+        if (in_column(trip1, trip2, trip3, boundsp1, boundsp2)) {
+            // find which bit in the bitmask is for this column
+            uint index = (idx + (idy * tris.tri.length())) / 32;
+            uint pos = (idx + (idy * tris.tri.length())) % 32;
+            // flip the bit to true
+            atomicOr(results.columns[index],(1 << pos));
+        }
+    }
+}

@@ -68,13 +68,8 @@ impl DropCutter {
                         // calculate the intersection
                         let x_offset = (x as f32 + (tpoint.pos.x * scale)).round() as i32;
                         let y_offset = (y as f32 + (tpoint.pos.y * scale)).round() as i32;
-                        if x_offset < columns as i32
-                            && x_offset >= 0
-                            && y_offset < rows as i32
-                            && y_offset >= 0
-                        {
-                            self.heightmap[x_offset as usize][y_offset as usize].pos.z
-                                - tpoint.pos.z
+                        if x_offset < columns as i32 && x_offset >= 0 && y_offset < rows as i32 && y_offset >= 0 {
+                            self.heightmap[x_offset as usize][y_offset as usize].pos.z - tpoint.pos.z
                         } else {
                             // TODO: this should be min z
                             0.
@@ -156,9 +151,7 @@ pub fn geo(_py: Python, m: &PyModule) -> PyResult<()> {
     fn move_to_zero_py(_py: Python, mut tris: Vec<Triangle3d>) { move_to_zero(&mut tris); }
 
     #[pyfn(m, "generate_grid")]
-    fn generate_grid_py(_py: Python, bounds: &Line3d, scale: f32) -> Vec<Vec<Point3d>> {
-        generate_grid(bounds, &scale)
-    }
+    fn generate_grid_py(_py: Python, bounds: &Line3d, scale: f32) -> Vec<Vec<Point3d>> { generate_grid(bounds, &scale) }
 
     #[pyfn(m, "generate_columns")]
     fn generate_columns_py(
@@ -216,11 +209,7 @@ pub fn geo(_py: Python, m: &PyModule) -> PyResult<()> {
     }
 
     #[pyfn(m, "generate_layers")]
-    pub fn generate_layers_py(
-        toolpath: Vec<Vec<Point3d>>,
-        bounds: &Line3d,
-        stepdown: f32,
-    ) -> Vec<Vec<Vec<Point3d>>> {
+    pub fn generate_layers_py(toolpath: Vec<Vec<Point3d>>, bounds: &Line3d, stepdown: f32) -> Vec<Vec<Vec<Point3d>>> {
         generate_layers(&toolpath, bounds, &stepdown)
     }
 
@@ -230,17 +219,13 @@ pub fn geo(_py: Python, m: &PyModule) -> PyResult<()> {
     }
 
     #[pyfn(m, "new_endmill")]
-    fn new_endmill_py(_py: Python, radius: f32, scale: f32) -> Tool {
-        Tool::new_endmill(radius, scale)
-    }
+    fn new_endmill_py(_py: Python, radius: f32, scale: f32) -> Tool { Tool::new_endmill(radius, scale) }
 
     #[pyfn(m, "new_ball")]
     fn new_ball_py(_py: Python, radius: f32, scale: f32) -> Tool { Tool::new_ball(radius, scale) }
 
     #[pyfn(m, "new_v_bit")]
-    fn new_v_bit_py(_py: Python, radius: f32, angle: f32, scale: f32) -> Tool {
-        Tool::new_v_bit(radius, angle, scale)
-    }
+    fn new_v_bit_py(_py: Python, radius: f32, angle: f32, scale: f32) -> Tool { Tool::new_v_bit(radius, angle, scale) }
 
     Ok(())
 }

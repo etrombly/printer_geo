@@ -18,12 +18,7 @@ pub fn compute(_py: Python, m: &PyModule) -> PyResult<()> {
     fn init_vk_py(_py: Python) -> PyResult<Vk> { Ok(Vk::new()?) }
 
     #[pyfn(m, "intersect_tris")]
-    fn intersect_tris_py(
-        _py: Python,
-        tris: Vec<Triangle3d>,
-        points: Vec<Point3d>,
-        vk: &Vk,
-    ) -> PyResult<Vec<Point3d>> {
+    fn intersect_tris_py(_py: Python, tris: Vec<Triangle3d>, points: Vec<Point3d>, vk: &Vk) -> PyResult<Vec<Point3d>> {
         Ok(intersect_tris(&tris, &points, &vk)?)
     }
 

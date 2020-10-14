@@ -32,9 +32,7 @@ impl ToolType {
     pub fn create(&self, radius: f32, angle: Option<f32>, scale: f32) -> Tool {
         match self {
             ToolType::Endmill => Tool::new_endmill(radius, scale),
-            ToolType::VBit => {
-                Tool::new_v_bit(radius, angle.expect("V-Bit requires tool angle"), scale)
-            },
+            ToolType::VBit => Tool::new_v_bit(radius, angle.expect("V-Bit requires tool angle"), scale),
             ToolType::Ball => Tool::new_ball(radius, scale),
         }
     }
