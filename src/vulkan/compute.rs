@@ -75,7 +75,7 @@ pub fn intersect_tris(
     points: &[Point3d],
     vk: Rc<VulkanState>,
 ) -> Result<Vec<Point3d>, ComputeError> {
-    let shader = to_vec32(include_bytes!("../../shaders/drop.spv").to_vec());
+    let shader = to_vec32(include_bytes!("../../shaders/spirv/drop.spv").to_vec());
 
     // Map Buffers
     let buffer_sizes: Vec<u64> = vec![
@@ -205,7 +205,7 @@ pub fn partition_tris(
     columns: &[Line3d],
     vk: Rc<VulkanState>,
 ) -> Result<Vec<Vec<Triangle3d>>, ComputeError> {
-    let shader = to_vec32(include_bytes!("../../shaders/partition.spv").to_vec());
+    let shader = to_vec32(include_bytes!("../../shaders/spirv/partition.spv").to_vec());
 
     // Map Buffers
 
