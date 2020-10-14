@@ -1,10 +1,7 @@
 use ash::{version::DeviceV1_0, vk};
-use std::{ffi::CString, path::PathBuf, rc::Rc};
+use std::{ffi::CString, rc::Rc};
 
-use crate::vulkan::{
-    utils::{load_file, to_vec32},
-    vkstate::VulkanState,
-};
+use crate::vulkan::vkstate::VulkanState;
 
 pub struct VkShader {
     pub bytecode: Vec<u32>,

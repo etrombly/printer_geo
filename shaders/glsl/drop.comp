@@ -65,16 +65,18 @@ void main() {
     uint idx = gl_GlobalInvocationID.x;
     // idy is point array index
     uint idy = gl_GlobalInvocationID.y;
-    int hit = 0;
-    // convert from floats to vecs
-    vec3 origin = vec3(points.point[idy].x, points.point[idy].y, float(points.point[idy].z) / 1000);
-    vec3 p1 = vec3(tris.tri[idx].p1x, tris.tri[idx].p1y, tris.tri[idx].p1z);
-    vec3 p2 = vec3(tris.tri[idx].p2x, tris.tri[idx].p2y, tris.tri[idx].p2z);
-    vec3 p3 = vec3(tris.tri[idx].p3x, tris.tri[idx].p3y, tris.tri[idx].p3z);
-    // check if the current point intersects with the current triangle
-    bool intersection = ray_tri_intersect(origin, p1, p2, p3, hit);
-    // if Z is higher write it as the current Z
-    if (intersection) {
-        atomicMax(points.point[idy].z, hit);
+    if(idx < tris.tri.length() && idy < points.point.length()) {
+        int hit = 0;
+        // convert from floats to vecs
+        vec3 origin = vec3(points.point[idy].x, points.point[idy].y, float(points.point[idy].z) / 1000);
+        vec3 p1 = vec3(tris.tri[idx].p1x, tris.tri[idx].p1y, tris.tri[idx].p1z);
+        vec3 p2 = vec3(tris.tri[idx].p2x, tris.tri[idx].p2y, tris.tri[idx].p2z);
+        vec3 p3 = vec3(tris.tri[idx].p3x, tris.tri[idx].p3y, tris.tri[idx].p3z);
+        // check if the current point intersects with the current triangle
+        bool intersection = ray_tri_intersect(origin, p1, p2, p3, hit);
+        // if Z is higher write it as the current Z
+        if (intersection) {
+            atomicMax(points.point[idy].z, hit);
+        }
     }
 }

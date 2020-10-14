@@ -26,29 +26,33 @@ fn main() -> Result<(), BuildError> {
         if entry.file_type()?.is_file() {
             let in_path = entry.path();
 
-            let shader_type = in_path.extension().and_then(|ext| {
-                match ext.to_string_lossy().as_ref() {
+            let shader_type = in_path
+                .extension()
+                .and_then(|ext| match ext.to_string_lossy().as_ref() {
                     "vert" => Some(shaderc::ShaderKind::Vertex),
                     "frag" => Some(shaderc::ShaderKind::Fragment),
                     "comp" => Some(shaderc::ShaderKind::Compute),
                     _ => None,
-                }
-            });
+                });
             if let Some(shader_type) = shader_type {
                 let source = std::fs::read_to_string(&in_path)?;
                 let mut compiler = shaderc::Compiler::new().ok_or(BuildError::NoCompiler)?;
                 let mut options = shaderc::CompileOptions::new().ok_or(BuildError::NoOptions)?;
                 options.add_macro_definition("EP", Some("main"));
                 let binary_result = compiler.compile_into_spirv(
-                    &source, shader_type,
-                    &in_path.to_string_lossy(), "main", Some(&options))?;
-    
+                    &source,
+                    shader_type,
+                    &in_path.to_string_lossy(),
+                    "main",
+                    Some(&options),
+                )?;
+
                 // Determine the output path based on the input name
                 let out_path = format!(
                     "shaders/spirv/{}.spv",
                     entry.path().file_stem().ok_or(BuildError::NoFile)?.to_string_lossy()
                 );
-    
+
                 std::fs::write(&out_path, &binary_result.as_binary_u8())?;
             }
         }

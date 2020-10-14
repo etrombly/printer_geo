@@ -1,7 +1,6 @@
-use printer_geo::{bfs::*, geo::*, stl::*, vulkan::*};
-use rayon::prelude::*;
+use printer_geo::{geo::*, vulkan::*};
 use simplelog::*;
-use std::{fs::File, io::Write, rc::Rc};
+use std::rc::Rc;
 
 fn main() {
     CombinedLogger::init(vec![TermLogger::new(

@@ -84,17 +84,19 @@ void main() {
     // idy is the bounding box array index
     uint idy = gl_GlobalInvocationID.y;
     // convert from floats to vecs
-    vec3 trip1 = vec3(tris.tri[idx].p1x, tris.tri[idx].p1y, tris.tri[idx].p1z);
-    vec3 trip2 = vec3(tris.tri[idx].p2x, tris.tri[idx].p2y, tris.tri[idx].p2z);
-    vec3 trip3 = vec3(tris.tri[idx].p3x, tris.tri[idx].p3y, tris.tri[idx].p3z);
-    vec3 boundsp1 = vec3(columns.line[idy].p1x, columns.line[idy].p1y, columns.line[idy].p1z);
-    vec3 boundsp2 = vec3(columns.line[idy].p2x, columns.line[idy].p2y, columns.line[idy].p2z);
-    // check if current tri is in current column
-    if (in_column(trip1, trip2, trip3, boundsp1, boundsp2)) {
-        // find which bit in the bitmask is for this column
-        uint index = (idx + (idy * tris.tri.length())) / 32;
-        uint pos = (idx + (idy * tris.tri.length())) % 32;
-        // flip the bit to true
-        atomicOr(results.columns[index],(1 << pos));
+    if(idx < tris.tri.length() && idy < columns.line.length()) {
+        vec3 trip1 = vec3(tris.tri[idx].p1x, tris.tri[idx].p1y, tris.tri[idx].p1z);
+        vec3 trip2 = vec3(tris.tri[idx].p2x, tris.tri[idx].p2y, tris.tri[idx].p2z);
+        vec3 trip3 = vec3(tris.tri[idx].p3x, tris.tri[idx].p3y, tris.tri[idx].p3z);
+        vec3 boundsp1 = vec3(columns.line[idy].p1x, columns.line[idy].p1y, columns.line[idy].p1z);
+        vec3 boundsp2 = vec3(columns.line[idy].p2x, columns.line[idy].p2y, columns.line[idy].p2z);
+        // check if current tri is in current column
+        if (in_column(trip1, trip2, trip3, boundsp1, boundsp2)) {
+            // find which bit in the bitmask is for this column
+            uint index = (idx + (idy * tris.tri.length())) / 32;
+            uint pos = (idx + (idy * tris.tri.length())) % 32;
+            // flip the bit to true
+            atomicOr(results.columns[index],(1 << pos));
+        }
     }
 }

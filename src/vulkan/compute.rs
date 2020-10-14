@@ -5,46 +5,17 @@
 pub use crate::geo::*;
 use crate::vulkan::{utils::to_vec32, vkstate::VulkanState, *};
 pub use ash::version::{DeviceV1_0, EntryV1_0, InstanceV1_0};
-use ash::{
-    util::*,
-    vk,
-    vk::{
-        CommandBuffer, CommandBufferBeginInfo, CommandBufferResetFlags, CommandBufferUsageFlags, CommandPool,
-        DescriptorBufferInfo, DescriptorPoolCreateInfo, DescriptorSetLayoutBinding, DescriptorSetLayoutCreateInfo,
-        DescriptorType, Fence, PhysicalDeviceMemoryProperties, PipelineBindPoint, PipelineShaderStageCreateInfo, Queue,
-        ShaderStageFlags, SubmitInfo, WriteDescriptorSet,
-    },
-    Device, Entry, Instance,
-};
+use ash::vk;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
+use rayon::prelude::*;
 use std::{
     cell::RefCell,
     ffi::CString,
-    io::Cursor,
-    mem::{self, align_of},
-    os::raw::c_void,
     rc::Rc,
 };
 use thiserror::Error;
-use rayon::prelude::*;
 
-/*
-#[derive(Error, Debug)]
-/// Error types for vulkan devices
-pub enum VkError {
-    #[error("Unable to load ash")]
-    Loading(#[from] ash::LoadingError),
-    #[error("Unable to get vulkan instance")]
-    Instance(#[from] ash::InstanceError),
-    #[error("Vulkan error")]
-    VkResult(#[from] ash::vk::Result),
-    #[error("Vulkan error")]
-    Graphics,
-    #[error("Could not create vulkan device")]
-    Device,
-}
-*/
 #[derive(Error, Debug)]
 /// Error types for vulkan compute operations
 pub enum ComputeError {
@@ -150,7 +121,7 @@ pub fn intersect_tris(
     cmd_pool.bind_pipeline(shad_pip_vec.pipeline, vk::PipelineBindPoint::COMPUTE, cmd_buffer);
     cmd_pool.bind_descriptor(shad_pipeline_layout, vk::PipelineBindPoint::COMPUTE, &descriptor.set, 0);
 
-    cmd_pool.dispatch((tris.len() as u32 / 32) + 1, (points.len() as u32 / 32) + 1, 1, 0);
+    cmd_pool.dispatch((tris.len() / 32) as u32 + 1, (points.len() / 32) as u32 + 1, 1, 0);
 
     // Memory barrier
     let mut buffer_barrier: Vec<vk::BufferMemoryBarrier> = Vec::new();
@@ -186,7 +157,7 @@ pub fn intersect_tris(
     while fence.status() == vkfence::FenceStates::UNSIGNALED {}
 
     let output: Vec<Point3d> = memory
-        .get_buffer::<(f32,f32,i32)>(&buffers[1])
+        .get_buffer::<(f32, f32, i32)>(&buffers[1])
         .iter()
         .map(|x| Point3d::new(x.0, x.1, x.2 as f32 / 1000.))
         .collect();
@@ -209,13 +180,12 @@ pub fn partition_tris(
     let shader = to_vec32(include_bytes!("../../shaders/spirv/partition.spv").to_vec());
 
     // Map Buffers
-    let count = ((tris.len() as f32 - 1.) + ((columns.len() as f32 - 1.) * tris.len() as f32) / 32.)
-        .ceil() as usize;
+    let count = ((tris.len() as f32 - 1.) + ((columns.len() as f32 - 1.) * tris.len() as f32) / 32.).ceil() as usize;
     let dest_content: Vec<u32> = vec![0u32; count];
 
     let buffer_sizes: Vec<u64> = vec![
         (tris.len() * std::mem::size_of::<Triangle3d>()) as u64,
-        (columns.len() * std::mem::size_of::<Point3d>()) as u64,
+        (columns.len() * std::mem::size_of::<Line3d>()) as u64,
         (dest_content.len() * std::mem::size_of::<u32>()) as u64,
     ];
 
@@ -284,7 +254,7 @@ pub fn partition_tris(
     cmd_pool.bind_pipeline(shad_pip_vec.pipeline, vk::PipelineBindPoint::COMPUTE, cmd_buffer);
     cmd_pool.bind_descriptor(shad_pipeline_layout, vk::PipelineBindPoint::COMPUTE, &descriptor.set, 0);
 
-    cmd_pool.dispatch((tris.len() as u32 / 32) + 1, (columns.len() as u32 / 32) + 1, 1, 0);
+    cmd_pool.dispatch((tris.len() / 32) as u32 + 1, (columns.len() / 32) as u32 + 1, 1, 0);
 
     // Memory barrier
     let mut buffer_barrier: Vec<vk::BufferMemoryBarrier> = Vec::new();

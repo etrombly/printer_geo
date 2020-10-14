@@ -1,4 +1,4 @@
-use crate::vulkan::utils::{cstr2string, tick};
+//use crate::vulkan::utils::cstr2string;
 use ash::{
     extensions::ext::DebugReport,
     version::{DeviceV1_0, EntryV1_0, InstanceV1_0},
@@ -131,12 +131,11 @@ pub fn init_vulkan() -> Result<VulkanState, VkStateError> {
 
     let physical: PhysicalDevice;
     let phy_count = unsafe { instance.enumerate_physical_devices()? };
-    //if phy_count.len() == 1 {
     physical = phy_count[0];
-    let properties = unsafe { instance.get_physical_device_properties(physical) };
-
-    let phy_name = cstr2string(properties.device_name.to_vec());
     /*
+    if phy_count.len() == 1 {
+    let properties = unsafe { instance.get_physical_device_properties(physical) };
+    let phy_name = cstr2string(properties.device_name.to_vec());
         info!("Only one physical device ({}) defaulting to it.", phy_name);
     } else {
         // We don't use the logger here because we need user
