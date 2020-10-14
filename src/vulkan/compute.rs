@@ -27,6 +27,7 @@ use std::{
     rc::Rc,
 };
 use thiserror::Error;
+use rayon::prelude::*;
 
 /*
 #[derive(Error, Debug)]
@@ -208,7 +209,6 @@ pub fn partition_tris(
     let shader = to_vec32(include_bytes!("../../shaders/spirv/partition.spv").to_vec());
 
     // Map Buffers
-
     let count = ((tris.len() as f32 - 1.) + ((columns.len() as f32 - 1.) * tris.len() as f32) / 32.)
         .ceil() as usize;
     let dest_content: Vec<u32> = vec![0u32; count];
@@ -392,6 +392,7 @@ pub fn partition_tris(
 
     // have to unpack the bitmask to determine what columns each tri belongs in
     let result = (0..columns.len())
+        .into_par_iter()
         .map(|column| {
             (0..tris.len())
                 .filter_map(|tri| {

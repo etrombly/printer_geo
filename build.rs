@@ -18,6 +18,7 @@ pub enum BuildError {
 fn main() -> Result<(), BuildError> {
     // Tell the build script to only run again if we change our source shaders
     println!("cargo:rerun-if-changed=shaders/glsl");
+    std::fs::create_dir_all("shaders/spirv")?;
 
     for entry in std::fs::read_dir("shaders/glsl")? {
         let entry = entry?;
@@ -34,8 +35,6 @@ fn main() -> Result<(), BuildError> {
                 }
             });
             if let Some(shader_type) = shader_type {
-                use std::io::Read;
-    
                 let source = std::fs::read_to_string(&in_path)?;
                 let mut compiler = shaderc::Compiler::new().ok_or(BuildError::NoCompiler)?;
                 let mut options = shaderc::CompileOptions::new().ok_or(BuildError::NoOptions)?;
@@ -47,7 +46,7 @@ fn main() -> Result<(), BuildError> {
                 // Determine the output path based on the input name
                 let out_path = format!(
                     "shaders/spirv/{}.spv",
-                    in_path.file_name().ok_or(BuildError::NoFile)?.to_string_lossy()
+                    entry.path().file_stem().ok_or(BuildError::NoFile)?.to_string_lossy()
                 );
     
                 std::fs::write(&out_path, &binary_result.as_binary_u8())?;
