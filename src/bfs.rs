@@ -1,4 +1,5 @@
 use crate::geo::Point3d;
+use float_cmp::approx_eq;
 /// modified from https://www.quora.com/What-is-an-efficient-algorithm-to-find-an-island-of-connected-1s-in-a-matrix-of-0s-and-1s
 
 const SIBLINGS: [(i32, i32); 8] = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)];
@@ -32,7 +33,7 @@ pub fn bfs(node: (usize, usize), visited: &mut Visited, data: &[Vec<Point3d>]) -
     Some(lands)
 }
 
-pub fn get_islands(data: &[Vec<Point3d>]) -> Vec<Vec<Point3d>> {
+pub fn get_islands(data: &[Vec<Point3d>], diameter: f32) -> Vec<Vec<Vec<Point3d>>> {
     let mut visited = Visited::new(data.len(), data[0].len());
     let indices: Vec<_> = data
         .iter()
@@ -53,7 +54,7 @@ pub fn get_islands(data: &[Vec<Point3d>]) -> Vec<Vec<Point3d>> {
     indices
         .iter()
         .map(|x| x.iter().map(|y| data[y.0][y.1]).collect::<Vec<_>>())
-        .collect()
+        .map(|island| partition_segments(&island, diameter)).collect()
 }
 
 pub struct Visited {
@@ -79,4 +80,40 @@ impl Visited {
         let pos = (column + (row * self.columns)) % 32;
         self.mask[index] & (1 << pos) == (1 << pos)
     }
+}
+
+pub fn partition_segments(data: &Vec<Point3d>, diameter: f32) -> Vec<Vec<Point3d>> {
+    let mut output = Vec::new();
+    let mut data = data.clone();
+    while data.len() > 0 {
+        let mut column = Vec::new();
+        if let Some(current) = data.pop() {
+            column.push(current);
+            data = data
+                .into_iter()
+                .filter(|point| {
+                    if approx_eq!(f32, current.pos.x, point.pos.x, ulps = 3) {
+                        column.push(*point);
+                        false
+                    } else {
+                        true
+                    }
+                })
+                .collect();
+            column.sort();
+            let mut segment = Vec::new();
+            let mut last = column[0];
+            for point in column {
+                if (point.pos.y - last.pos.y).abs() > diameter * 2. {
+                    output.push(segment.clone());
+                    segment.clear();
+                }
+                segment.push(point);
+                last = point;
+            }
+            output.push(segment);
+        }
+    }
+    output.sort_by(|a,b| a[0][0].partial_cmp(&b[0][0]).unwrap());
+    output
 }
