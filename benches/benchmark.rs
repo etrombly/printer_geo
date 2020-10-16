@@ -1,7 +1,8 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use printer_geo::{compute::*, geo::*, stl::*};
+use printer_geo::{geo::*, stl::*};
 use rayon::prelude::*;
 
+/*
 // TODO: update benchmarks
 pub fn criterion_benchmark(c: &mut Criterion) {
     let stl = load_stl("3DBenchy.stl");
@@ -23,3 +24,4 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
 criterion_group!(benches, criterion_benchmark);
 criterion_main!(benches);
+*/

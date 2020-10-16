@@ -1,58 +1,77 @@
 use crate::geo::{Point3d, distance};
 
-pub fn tour_len(islands: &[Vec<Vec<Point3d>>], start: Point3d) -> f32 {
-    let mut len = distance(&start.pos.xy(), &islands[0][0][0].pos.xy());
-    let mut islands = islands.iter().peekable();
-    while let Some(island) = islands.next() {
-        if let Some(other) = islands.peek() {
-            let segment = island.len() - 1;
-            let point = island[segment].len() - 1;
-            len += distance(&island[segment][point].pos.xy(), &other[0][0].pos.xy());
+pub fn tour_len(islands: &[Vec<Vec<Point3d>>], path: &[usize], start_end: &[Vec<(usize,usize,usize,usize)>], start: Point3d) -> f32 {
+    let (mut segment, mut point, mut len) = get_nearest_island_segment(&islands[path[0]], &start);
+    let mut path = path.iter().peekable();
+    while let Some(island) = path.next() {
+        if let Some(other) = path.peek() {
+            let (current_segment, current_point, current_dist) = get_nearest_island_segment(&islands[**other], &islands[*island][segment][point]);
+            for (start_segment, start_point, end_segment, end_point) in &start_end[**other] {
+                if start_segment == &current_segment && start_point == &current_point {
+                    segment = *end_segment;
+                    point = *end_point;
+                }
+            }
+            len += current_dist;
         }
     }
     len
 }
 
-pub fn get_next_segment(segments: &mut Vec<Vec<Point3d>>, last: &Point3d) -> (usize, bool, f32) {
+pub fn get_next_segment(segments: &[Vec<Point3d>], exclude: &[usize], last: &Point3d) -> (usize, usize, f32) {
     let mut dist = f32::MAX;
     let mut current_segment = 0;
-    let mut rev = true;
+    let mut point = 0;
     for (index, segment) in segments.iter().enumerate() {
+        if exclude.contains(&index) {continue}
         let curr_dist = distance(&segment[segment.len() - 1].pos.xy(), &last.pos.xy());
         if curr_dist < dist {
             dist = curr_dist;
-            rev = true;
+            point = segment.len() - 1;
             current_segment = index;
         }
         let curr_dist = distance(&segment[0].pos.xy(), &last.pos.xy());
         if curr_dist < dist {
             dist = curr_dist;
-            rev = false;
+            point = 0;
             current_segment = index;
         }
     }
-    (current_segment, rev, dist)
+    (current_segment, point, dist)
 }
 
-pub fn get_next_island(islands: &Vec<Vec<Vec<Point3d>>>, last: &Point3d) -> (usize, usize, bool, f32) {
+pub fn get_next_island(islands: &[Vec<Vec<Point3d>>], exclude: &[usize], last: &Point3d) -> (usize, usize, usize, f32) {
     let mut dist = f32::MAX;
-    let mut current_island = 0;
-    let mut current_segment = 0;
-    let mut rev = false;
-    for (index, island) in islands.iter().enumerate() {
-        // check first and last segment
-        for segment in &[0_usize, island.len() - 1] {
-            // check first and last point
-            for point in &[0_usize, island[*segment].len() - 1] {
-                let curr_dist = distance(&island[*segment][*point].pos.xy(), &last.pos.xy());
-                if  curr_dist < dist {
-                    dist = curr_dist;
-                    current_segment = *segment;
-                    if point == &0 {rev = false} else {rev = true}
-                    current_island = index;
-                }
+    let mut island = 0;
+    let mut segment = 0;
+    let mut point = 0;
+    for (index, current_island) in islands.iter().enumerate() {
+        if exclude.contains(&index) {continue}
+        let (current_segment, current_point, curr_dist) = get_nearest_island_segment(&current_island, &last);
+        if  curr_dist < dist {
+            dist = curr_dist;
+            segment = current_segment;
+            point = current_point;
+            island = index;
+        }
+    }
+    (island, segment, point, dist)
+}
+
+pub fn get_nearest_island_segment(island: &[Vec<Point3d>], last: &Point3d) -> (usize, usize, f32) {
+    let mut segment = 0;
+    let mut point = 0;
+    let mut dist = f32::MAX;
+    for current_segment in &[0_usize, island.len() - 1] {
+        // check first and last point
+        for current_point in &[0_usize, island[*current_segment].len() - 1] {
+            let current_dist = distance(&island[*current_segment][*current_point].pos.xy(), &last.pos.xy());
+            if  current_dist < dist {
+                dist = current_dist;
+                segment = *current_segment;
+                point = *current_point;
             }
         }
     }
-    (current_island, current_segment, rev, dist)
+    (segment, point, dist)
 }
