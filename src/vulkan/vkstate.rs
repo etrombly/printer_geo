@@ -5,13 +5,8 @@ use ash::{
     vk::{self, make_version, PhysicalDevice},
     Device, Entry, Instance,
 };
-use log::{info, warn};
-use std::{
-    ffi::{CStr, CString},
-    io::{self, BufRead},
-    os::raw::{c_char, c_void},
-    rc::Rc,
-};
+use log::info;
+use std::{ffi::CString, rc::Rc};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -202,7 +197,7 @@ pub fn init_vulkan() -> Result<VulkanState, VkStateError> {
                     None
                 }
             })
-            .nth(0)
+            .next()
             .ok_or(VkStateError::NoQueue)? as u32
     };
 

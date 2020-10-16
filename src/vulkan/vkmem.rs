@@ -65,7 +65,7 @@ impl VkBuffer {
 }
 
 /// Return (minimum memory size needed, buffers offsets)
-pub fn compute_non_overlapping_buffer_alignment(buffers: &Vec<VkBuffer>) -> (u64, Vec<u64>) {
+pub fn compute_non_overlapping_buffer_alignment(buffers: &[VkBuffer]) -> (u64, Vec<u64>) {
     let mut min_size = 0;
     let mut offsets: Vec<u64> = Vec::new();
     for buffer in buffers {
@@ -125,9 +125,7 @@ impl VkMem {
             }
         }
 
-        if mem_index.is_none() {
-            return None;
-        }
+        mem_index?;
 
         let mem_index = mem_index.unwrap();
         let allocate_nfo = vk::MemoryAllocateInfo::builder()
@@ -150,7 +148,7 @@ impl VkMem {
         Some(mem_struct)
     }
 
-    pub fn map_memory<T>(&self, data: &Vec<T>, offset: u64) {
+    pub fn map_memory<T>(&self, data: &[T], offset: u64) {
         let size = (data.len() * std::mem::size_of::<T>()) as u64;
         let buffer: *mut T = unsafe {
             self.state

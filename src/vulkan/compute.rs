@@ -54,7 +54,7 @@ pub fn intersect_tris(
     let mut buffers = buffer_sizes
         .iter()
         .map(|size| vkmem::VkBuffer::new(vk.clone(), *size))
-        .collect();
+        .collect::<Vec<_>>();
     let (mem_size, offsets) = vkmem::compute_non_overlapping_buffer_alignment(&buffers);
     let memory = vkmem::VkMem::find_mem(vk.clone(), mem_size).ok_or(ComputeError::NoMem)?;
 
@@ -87,7 +87,7 @@ pub fn intersect_tris(
     shader.borrow_mut().create_pipeline_layout();
     let shad_pipeline_layout = shader.borrow().pipeline.ok_or(ComputeError::NoPipe)?;
     let shad_pip_vec = vkpipeline::VkComputePipeline::new(vk.clone(), &shader.borrow());
-    let mut descriptor = vkdescriptor::VkDescriptor::new(vk.clone(), shader.clone());
+    let mut descriptor = vkdescriptor::VkDescriptor::new(vk.clone(), shader);
 
     descriptor.add_pool_size(buffers.len() as u32, vk::DescriptorType::STORAGE_BUFFER);
     descriptor.create_pool(1);
@@ -188,7 +188,7 @@ pub fn partition_tris(
     let mut buffers = buffer_sizes
         .iter()
         .map(|size| vkmem::VkBuffer::new(vk.clone(), *size))
-        .collect();
+        .collect::<Vec<_>>();
     let (mem_size, offsets) = vkmem::compute_non_overlapping_buffer_alignment(&buffers);
     let memory = vkmem::VkMem::find_mem(vk.clone(), mem_size).ok_or(ComputeError::NoMem)?;
 
@@ -220,7 +220,7 @@ pub fn partition_tris(
     shader.borrow_mut().create_pipeline_layout();
     let shad_pipeline_layout = shader.borrow().pipeline.ok_or(ComputeError::NoPipe)?;
     let shad_pip_vec = vkpipeline::VkComputePipeline::new(vk.clone(), &shader.borrow());
-    let mut descriptor = vkdescriptor::VkDescriptor::new(vk.clone(), shader.clone());
+    let mut descriptor = vkdescriptor::VkDescriptor::new(vk.clone(), shader);
 
     descriptor.add_pool_size(buffers.len() as u32, vk::DescriptorType::STORAGE_BUFFER);
     descriptor.create_pool(1);

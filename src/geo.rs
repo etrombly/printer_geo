@@ -409,15 +409,15 @@ impl Triangle3d {
     }
 
     pub fn intersect_ray(&self, point: Point3d) -> Option<f32> {
-        let a = self.p1 - point;
-        let b = self.p2 - point;
-        let c = self.p3 - point;
-        let a_x = a[0] * a[2];
-        let a_y = a[1] * a[2];
-        let b_x = b[0] * b[2];
-        let b_y = b[1] * b[2];
-        let c_x = c[0] * c[2];
-        let c_y = c[1] * c[2];
+        let p1 = self.p1 - point;
+        let p2 = self.p2 - point;
+        let p3 = self.p3 - point;
+        let a_x = p1[0] * p1[2];
+        let a_y = p1[1] * p1[2];
+        let b_x = p2[0] * p2[2];
+        let b_y = p2[1] * p2[2];
+        let c_x = p3[0] * p3[2];
+        let c_y = p3[1] * p3[2];
         let u = c_x * b_y - c_y * b_x;
         let v = a_x * c_y - a_y * c_x;
         let w = b_x * a_y - b_y * a_x;
@@ -431,10 +431,10 @@ impl Triangle3d {
             return None;
         }
 
-        let t = u * a[2] + v * b[2] + w * c[2];
+        let t = u * p1[2] + v * p2[2] + w * p3[2];
         let rcp_det = 1.0 / det;
         let hit = point[2] + (t * rcp_det);
-        return Some(hit);
+        Some(hit)
     }
 
     pub fn bbox(self) -> Line3d {
@@ -549,9 +549,7 @@ impl Circle {
     pub fn in_2d_bounds(&self, point: &Point3d) -> bool {
         let dx = f32::abs(point.pos.x - self.center.pos.x);
         let dy = f32::abs(point.pos.y - self.center.pos.y);
-        if dx > self.radius {
-            false
-        } else if dy > self.radius {
+        if dx > self.radius || dy > self.radius {
             false
         } else if dx + dy <= self.radius {
             true
@@ -962,7 +960,7 @@ pub fn partition_tris_fallback(tris: &[Triangle3d], columns: &[Line3d]) -> Vec<V
         .collect()
 }
 
-pub fn to_point_cloud(tris: &Vec<Point3d>) -> String {
+pub fn to_point_cloud(tris: &[Point3d]) -> String {
     let mut out = tris
         .par_iter()
         .map(|point| format!("{:.3} {:.3} {:.3}\n", point.pos.x, point.pos.y, point.pos.z))

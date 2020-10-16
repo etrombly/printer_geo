@@ -67,12 +67,12 @@ pub fn min_max<T: PartialOrd + Copy>(data: &[T]) -> Option<(T, T)> {
 
     let mut min_local: T = data[0];
     let mut max_local: T = data[0];
-    for i in 1..data.len() {
-        if min_local > data[i] {
-            min_local = data[i];
+    for item in data {
+        if &min_local > item {
+            min_local = *item;
         }
-        if max_local < data[i] {
-            max_local = data[i];
+        if &max_local < item {
+            max_local = *item;
         }
     }
 
@@ -86,7 +86,7 @@ where
     map_min + (x - origin_min) * (map_max - map_min) / (origin_max - origin_min)
 }
 
-pub fn to_ppm(data: &Vec<f32>, width: usize, height: usize) -> Option<String> {
+pub fn to_ppm(data: &[f32], width: usize, height: usize) -> Option<String> {
     if width * height * 3 != data.len() {
         return None;
     }
@@ -97,10 +97,10 @@ pub fn to_ppm(data: &Vec<f32>, width: usize, height: usize) -> Option<String> {
     ppm.push_str(&format!("{} {}\n", width, height));
     ppm.push_str("255\n");
 
-    for i in 0..data.len() {
-        ppm.push_str(&format!("{} ", remap(data[i], min, max, 0.0, 255.0) as u8));
+    for (i, item) in data.iter().enumerate() {
+        ppm.push_str(&format!("{} ", remap(*item, min, max, 0.0, 255.0) as u8));
         if i % width == 0 {
-            ppm.push_str("\n");
+            ppm.push('\n');
         }
     }
 

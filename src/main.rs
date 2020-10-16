@@ -13,7 +13,7 @@ fn main() {
     let tris = vec![Triangle3d::new((1., 1., 1.), (3., 3., 1.), (1., 3., 1.))];
     let points = vec![Point3d::new(1.5, 1.5, 0.), Point3d::new(10., 10., 0.)];
 
-    let intersect = compute::intersect_tris(&tris, &points, vk.clone()).unwrap();
+    let intersect = compute::intersect_tris(&tris, &points, vk).unwrap();
     println!("{:?}", intersect);
 
     //let mut grid = Vec::new();

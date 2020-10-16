@@ -83,10 +83,10 @@ impl Visited {
     }
 }
 
-pub fn partition_segments(data: &Vec<Point3d>, diameter: f32) -> Vec<Vec<Point3d>> {
+pub fn partition_segments(data: &[Point3d], diameter: f32) -> Vec<Vec<Point3d>> {
     let mut output = Vec::new();
-    let mut data = data.clone();
-    while data.len() > 0 {
+    let mut data = data.to_owned();
+    while !data.is_empty() {
         let mut column = Vec::new();
         if let Some(current) = data.pop() {
             column.push(current);
