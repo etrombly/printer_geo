@@ -54,7 +54,8 @@ pub fn get_islands(data: &[Vec<Point3d>], diameter: f32) -> Vec<Vec<Vec<Point3d>
     indices
         .iter()
         .map(|x| x.iter().map(|y| data[y.0][y.1]).collect::<Vec<_>>())
-        .map(|island| partition_segments(&island, diameter)).collect()
+        .map(|island| partition_segments(&island, diameter))
+        .collect()
 }
 
 pub struct Visited {
@@ -114,6 +115,6 @@ pub fn partition_segments(data: &Vec<Point3d>, diameter: f32) -> Vec<Vec<Point3d
             output.push(segment);
         }
     }
-    output.sort_by(|a,b| a[0][0].partial_cmp(&b[0][0]).unwrap());
+    output.sort_by(|a, b| a[0][0].partial_cmp(&b[0][0]).unwrap());
     output
 }

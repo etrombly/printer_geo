@@ -30,7 +30,7 @@ version = "0.7.4"
 features = ["serde"]
 
 [dependencies.serde]
-version = "1.0.116"
+version = "1.0.117"
 features =["derive"]
 
 [dependencies.pyo3]

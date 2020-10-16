@@ -1,5 +1,4 @@
-use crate::geo::Point3d;
-use crate::tsp::util::*;
+use crate::{geo::Point3d, tsp::util::*};
 
 pub fn nn(islands: &[Vec<Vec<Point3d>>], start: Point3d) -> Vec<Vec<Vec<Point3d>>> {
     let mut result = Vec::new();
@@ -13,7 +12,9 @@ pub fn nn(islands: &[Vec<Vec<Point3d>>], start: Point3d) -> Vec<Vec<Vec<Point3d>
         let mut segment_exclude = vec![current_segment];
         for _ in 0..island.len() {
             let mut segment = island[current_segment].clone();
-            if point != 0 {segment.reverse();}
+            if point != 0 {
+                segment.reverse();
+            }
             last = segment[segment.len() - 1];
             segments.push(segment);
             let tmp = get_next_segment(&mut island, &segment_exclude, &last);

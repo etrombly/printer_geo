@@ -9,11 +9,7 @@ use ash::vk;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
 use rayon::prelude::*;
-use std::{
-    cell::RefCell,
-    ffi::CString,
-    rc::Rc,
-};
+use std::{cell::RefCell, ffi::CString, rc::Rc};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
