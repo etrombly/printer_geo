@@ -1,4 +1,4 @@
-use shaderc;
+use shaderc::{ShaderKind, Compiler, CompileOptions};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -29,15 +29,15 @@ fn main() -> Result<(), BuildError> {
             let shader_type = in_path
                 .extension()
                 .and_then(|ext| match ext.to_string_lossy().as_ref() {
-                    "vert" => Some(shaderc::ShaderKind::Vertex),
-                    "frag" => Some(shaderc::ShaderKind::Fragment),
-                    "comp" => Some(shaderc::ShaderKind::Compute),
+                    "vert" => Some(ShaderKind::Vertex),
+                    "frag" => Some(ShaderKind::Fragment),
+                    "comp" => Some(ShaderKind::Compute),
                     _ => None,
                 });
             if let Some(shader_type) = shader_type {
                 let source = std::fs::read_to_string(&in_path)?;
-                let mut compiler = shaderc::Compiler::new().ok_or(BuildError::NoCompiler)?;
-                let mut options = shaderc::CompileOptions::new().ok_or(BuildError::NoOptions)?;
+                let mut compiler = Compiler::new().ok_or(BuildError::NoCompiler)?;
+                let mut options = CompileOptions::new().ok_or(BuildError::NoOptions)?;
                 options.add_macro_definition("EP", Some("main"));
                 let binary_result = compiler.compile_into_spirv(
                     &source,
