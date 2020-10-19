@@ -1,4 +1,4 @@
-use shaderc::{ShaderKind, Compiler, CompileOptions};
+use shaderc::{CompileOptions, Compiler, ShaderKind};
 use thiserror::Error;
 
 #[derive(Error, Debug)]

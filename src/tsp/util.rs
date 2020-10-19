@@ -1,19 +1,39 @@
 use crate::geo::{distance, Point3d};
 
+/// Check length of tour
+///
+/// # Examples
+///
+/// ```
+/// use printer_geo::geo::Point3d;
+/// use printer_geo::tsp::util::*;
+/// # let islands = gen_islands();
+/// let path = vec![0, 1, 2, 3];
+/// let start_end = gen_start_end(&islands);
+/// let len = tour_len(&islands, &path, &start_end, &Point3d::new(0.,0.,0.));
+/// # assert_eq!(7.4142137, len);
+/// ```
 pub fn tour_len(
     islands: &[Vec<Vec<Point3d>>],
     path: &[usize],
     start_end: &[Vec<(usize, usize, usize, usize)>],
-    start: Point3d,
+    start: &Point3d,
 ) -> f32 {
     let (mut segment, mut point, mut len) = get_nearest_island_segment(&islands[path[0]], &start);
+    let (current_segment, current_point) = (segment, point);
+    for (start_segment, start_point, end_segment, end_point) in &start_end[0] {
+        if (start_segment, start_point) == (&current_segment, &current_point) {
+            segment = *end_segment;
+            point = *end_point;
+        }
+    }
     let mut path = path.iter().peekable();
     while let Some(island) = path.next() {
         if let Some(other) = path.peek() {
             let (current_segment, current_point, current_dist) =
                 get_nearest_island_segment(&islands[**other], &islands[*island][segment][point]);
             for (start_segment, start_point, end_segment, end_point) in &start_end[**other] {
-                if start_segment == &current_segment && start_point == &current_point {
+                if (start_segment, start_point) == (&current_segment, &current_point) {
                     segment = *end_segment;
                     point = *end_point;
                 }
@@ -24,6 +44,18 @@ pub fn tour_len(
     len
 }
 
+/// Get next line segment in island
+///
+/// # Examples
+///
+/// ```
+/// use printer_geo::geo::Point3d;
+/// use printer_geo::tsp::util::*;
+/// # let islands = gen_islands();
+/// let exclude = Vec::new();
+/// let island = get_next_island(&islands, &exclude, &Point3d::new(0.,0.,0.));
+/// # assert_eq!((0, 0, 0, 1.4142135), island);
+/// ```
 pub fn get_next_segment(segments: &[Vec<Point3d>], exclude: &[usize], last: &Point3d) -> (usize, usize, f32) {
     let mut dist = f32::MAX;
     let mut current_segment = 0;
@@ -48,6 +80,18 @@ pub fn get_next_segment(segments: &[Vec<Point3d>], exclude: &[usize], last: &Poi
     (current_segment, point, dist)
 }
 
+/// Get closest island to last point
+///
+/// # Examples
+///
+/// ```
+/// use printer_geo::geo::Point3d;
+/// use printer_geo::tsp::util::*;
+/// # let islands = gen_islands();
+/// let exclude = vec![0];
+/// let island = get_next_segment(&islands[0], &exclude, &Point3d::new(1.,1.,1.));
+/// # assert_eq!((1, 0, 1.0), island);
+/// ```
 pub fn get_next_island(islands: &[Vec<Vec<Point3d>>], exclude: &[usize], last: &Point3d) -> (usize, usize, usize, f32) {
     let mut dist = f32::MAX;
     let mut island = 0;
@@ -84,4 +128,48 @@ pub fn get_nearest_island_segment(island: &[Vec<Point3d>], last: &Point3d) -> (u
         }
     }
     (segment, point, dist)
+}
+
+pub fn gen_start_end(islands: &[Vec<Vec<Point3d>>]) -> Vec<Vec<(usize, usize, usize, usize)>> {
+    let mut results = Vec::new();
+    for island in islands {
+        let len = island.len() - 1;
+        let mut current_island = Vec::new();
+        for (start_segment, start_point) in &[(0, 0), (0, island[0].len() - 1), (len, 0), (len, island[len].len() - 1)]
+        {
+            let mut exclude = Vec::new();
+            let mut current_segment = *start_segment;
+            let mut current_point = *start_point;
+            for _ in 0..island.len() {
+                let tmp = get_next_segment(&island, &exclude, &island[current_segment][current_point]);
+                exclude.push(tmp.0);
+                current_segment = tmp.0;
+                current_point = tmp.1;
+            }
+            current_island.push((*start_segment, *start_point, current_segment, current_point));
+        }
+        results.push(current_island);
+    }
+    results
+}
+
+/// generate data for doc tests
+pub fn gen_islands() -> Vec<Vec<Vec<Point3d>>> {
+    let mut islands = Vec::new();
+
+    for x in &[1., 4., 7., 10., 13., 16.] {
+        let mut island = Vec::new();
+        island.push(vec![
+            Point3d::new(*x, 1., 1.),
+            Point3d::new(*x, 2., 1.),
+            Point3d::new(*x, 3., 1.),
+        ]);
+        island.push(vec![
+            Point3d::new(x + 1., 1., 1.),
+            Point3d::new(x + 1., 2., 1.),
+            Point3d::new(x + 1., 3., 1.),
+        ]);
+        islands.push(island);
+    }
+    islands
 }
