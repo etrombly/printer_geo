@@ -969,7 +969,7 @@ pub fn partition_tris_fallback(tris: &[Triangle3d], columns: &[Line3d]) -> Vec<V
 pub fn to_point_cloud(tris: &[Point3d]) -> String {
     let mut out = tris
         .par_iter()
-        .map(|point| format!("{:.3} {:.3} {:.3}\n", point.pos.x, point.pos.y, point.pos.z))
+        .map(|point| format!("{:.4} {:.4} {:.4}\n", point.pos.x, point.pos.y, point.pos.z))
         .collect::<Vec<String>>();
     out.sort();
     out.dedup();
