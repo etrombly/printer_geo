@@ -633,6 +633,7 @@ pub fn move_to_zero(tris: &mut Vec<Triangle3d>) {
     let bounds = get_bounds(tris);
     tris.par_iter_mut()
         .for_each(|tri| tri.translate(-bounds.p1.pos.x, -bounds.p1.pos.y, -bounds.p2.pos.z));
+        //.for_each(|tri| tri.translate(-bounds.p1.pos.x, -bounds.p1.pos.y, 0.));
 }
 
 #[cfg_attr(feature = "python", pyclass)]

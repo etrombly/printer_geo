@@ -65,7 +65,7 @@ pub fn intersect_tris(
     mbuf.bind(memory.mem, offsets[1]);
     let points: Vec<_> = points
         .iter()
-        .map(|point| (point.pos[0], point.pos[1], (point.pos[2] * 1000.) as i32))
+        .map(|point| (point.pos[0], point.pos[1], (point.pos[2] * 100000.) as i32))
         .collect();
     memory.map_buffer(&points, mbuf);
 
@@ -155,7 +155,7 @@ pub fn intersect_tris(
     let output: Vec<Point3d> = memory
         .get_buffer::<(f32, f32, i32)>(&buffers[1])
         .iter()
-        .map(|x| Point3d::new(x.0, x.1, x.2 as f32 / 1000.))
+        .map(|x| Point3d::new(x.0, x.1, x.2 as f32 / 100000.))
         .collect();
 
     Ok(output)
