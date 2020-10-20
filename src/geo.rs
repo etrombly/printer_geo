@@ -4,6 +4,7 @@
 //! mostly wraps ultraviolet types with some additional functionality
 
 use crate::vulkan::{compute::intersect_tris, vkstate::VulkanState};
+use crate::stl::*;
 use float_cmp::approx_eq;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
@@ -39,6 +40,12 @@ impl Point3d {
     pub fn cross(&self, other: &Point3d) -> Point3d { self.pos.cross(other.pos).into() }
 
     pub fn dot(&self, other: &Point3d) -> f32 { self.pos.dot(other.pos) }
+}
+
+impl From<Point3d> for [f32;3] {
+    fn from(point: Point3d) -> Self {
+        [point[0], point[1], point[2]]
+    }
 }
 
 impl fmt::Display for Point3d {
@@ -207,7 +214,7 @@ impl Line3d {
         let b1 = x1 - x2;
         let c1 = x2 * y1 - x1 * y2;
 
-        // Second line coefficients
+        // Second line coefficients#[cfg(test)]
         let a2 = y4 - y3;
         let b2 = x3 - x4;
         let c2 = x4 * y3 - x3 * y4;
@@ -534,7 +541,6 @@ pub struct Circle {
 
 impl Circle {
     pub fn new(center: Point3d, radius: f32) -> Circle { Circle { center, radius } }
-
     /// Check if point is in circle,
     /// ignoring Z axis
     ///
@@ -968,4 +974,17 @@ pub fn to_point_cloud(tris: &[Point3d]) -> String {
     out.sort();
     out.dedup();
     out.join("")
+}
+
+pub fn heightmap_to_stl(map: &[Vec<Point3d>]) -> Result<Vec<u8>, std::io::Error> {
+    let mut output = Vec::new();
+    let mut tris = Vec::new();
+    for column in 0..map.len() - 1 {
+        for row in 1..map[column].len() - 1 {
+            tris.push(Triangle3d{p1:map[column][row], p2: map[column][row-1], p3: map[column+1][row-1]});
+            tris.push(Triangle3d{p1:map[column][row], p2: map[column+1][row], p3: map[column+1][row-1]});
+        }
+    }
+    from_triangles3d(&tris).to_bytes(&mut output)?;
+    Ok(output)
 }

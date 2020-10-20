@@ -15,6 +15,12 @@ pub struct Triangle {
     pub attr_byte_count: u16,
 }
 
+impl Triangle {
+    pub fn new(v1: [f32; 3], v2: [f32; 3], v3: [f32; 3]) -> Triangle {
+        Triangle {normal: [0.,0.,0.], v1, v2, v3, attr_byte_count: 0}
+    }
+}
+
 fn point_eq(lhs: [f32; 3], rhs: [f32; 3]) -> bool { lhs[0] == rhs[0] && lhs[1] == rhs[1] && lhs[2] == rhs[2] }
 
 impl PartialEq for Triangle {
@@ -34,9 +40,41 @@ pub struct BinaryStlHeader {
     pub num_triangles: u32,
 }
 
+impl BinaryStlHeader {
+    pub fn new(num_triangles: u32) -> BinaryStlHeader {
+        BinaryStlHeader{header: [0_u8;80], num_triangles}
+    }
+}
+
 pub struct BinaryStlFile {
     pub header: BinaryStlHeader,
     pub triangles: Vec<Triangle>,
+}
+
+impl BinaryStlFile {
+    pub fn new(triangles: Vec<Triangle>) -> BinaryStlFile {
+        let header = BinaryStlHeader::new(triangles.len() as u32);
+        BinaryStlFile{header, triangles}
+    }
+
+    pub fn to_bytes<T: WriteBytesExt>(&self, out: &mut T) -> Result<()> {
+        assert_eq!(self.header.num_triangles as usize, self.triangles.len());
+    
+        // write the header.
+        out.write_all(&self.header.header)?;
+        out.write_u32::<LittleEndian>(self.header.num_triangles)?;
+    
+        // write all the triangles
+        for t in &self.triangles {
+            write_point(out, t.normal)?;
+            write_point(out, t.v1)?;
+            write_point(out, t.v2)?;
+            write_point(out, t.v3)?;
+            out.write_u16::<LittleEndian>(t.attr_byte_count)?;
+        }
+    
+        Ok(())
+    }
 }
 
 fn read_point<T: ReadBytesExt>(input: &mut T) -> Result<[f32; 3]> {
@@ -107,31 +145,6 @@ fn write_point<T: WriteBytesExt>(out: &mut T, p: [f32; 3]) -> Result<()> {
     Ok(())
 }
 
-pub fn write_stl<T: WriteBytesExt>(out: &mut T, stl: &BinaryStlFile) -> Result<()> {
-    assert_eq!(stl.header.num_triangles as usize, stl.triangles.len());
-
-    // write the header.
-    out.write_all(&stl.header.header)?;
-    out.write_u32::<LittleEndian>(stl.header.num_triangles)?;
-
-    // write all the triangles
-    for t in &stl.triangles {
-        write_point(out, t.normal)?;
-        write_point(out, t.v1)?;
-        write_point(out, t.v2)?;
-        write_point(out, t.v3)?;
-        out.write_u16::<LittleEndian>(t.attr_byte_count)?;
-    }
-
-    Ok(())
-}
-
-pub fn load_stl(file: &str) -> BinaryStlFile {
-    let file = File::open(file).unwrap();
-    let mut buf_reader = BufReader::new(file);
-    read_stl(&mut buf_reader).unwrap()
-}
-
 pub fn to_triangles3d(file: &BinaryStlFile) -> Vec<Triangle3d> {
     // TODO: do I want to keep the normals? don't need them yet
     file.triangles
@@ -144,4 +157,9 @@ pub fn to_triangles3d(file: &BinaryStlFile) -> Vec<Triangle3d> {
             )
         })
         .collect()
+}
+
+pub fn from_triangles3d(tris: &[Triangle3d]) -> BinaryStlFile {
+    let triangles: Vec<_> = tris.iter().map(|tri| Triangle::new(tri.p1.into(), tri.p2.into(), tri.p3.into())).collect();
+    BinaryStlFile::new(triangles)
 }
