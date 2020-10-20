@@ -35,7 +35,7 @@ pub fn optimize_kopt(islands: &[Vec<Vec<Point3d>>], start: &Point3d) -> Vec<Vec<
         improve = false;
         path = (0..size).into_iter().collect();
         start_end = gen_start_end(&results);
-        for i in 1..(size - 1) {
+        for i in 0..(size - 1) {
             if let Some(min) = ((i + 1)..size)
                 .into_par_iter()
                 .map(|k| {
