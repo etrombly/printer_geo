@@ -1,4 +1,4 @@
-use crate::geo::Tool;
+use crate::tool::Tool;
 use clap::arg_enum;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -82,7 +82,7 @@ pub struct Opt {
     pub restmap: Option<PathBuf>,
 
     #[structopt(short, long)]
-    pub diameter: f32,
+    pub diameter: Option<f32>,
 
     #[structopt(long)]
     pub debug: bool,
@@ -101,4 +101,13 @@ pub struct Opt {
 
     #[structopt(short, long, possible_values = &ToolType::variants(), default_value="endmill", case_insensitive = true)]
     pub tool: ToolType,
+
+    #[structopt(long, parse(from_os_str))]
+    pub toolfile: Option<PathBuf>,
+
+    #[structopt(long)]
+    pub tooltable: Option<usize>,
+
+    #[structopt(long)]
+    pub toolnumber: Option<usize>,
 }

@@ -24,6 +24,7 @@ ash = "0.31.0"
 rand = "0.7.3"
 log = "0.4.11"
 simplelog = "0.8.0"
+serde_json = "1.0.59"
 
 [dependencies.ultraviolet]
 version = "0.7.4"

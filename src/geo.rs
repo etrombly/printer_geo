@@ -4,6 +4,7 @@
 //! mostly wraps ultraviolet types with some additional functionality
 
 use crate::{
+    tool::Tool,
     stl::*,
     vulkan::{compute::intersect_tris, vkstate::VulkanState},
 };
@@ -643,93 +644,6 @@ pub fn move_to_zero(tris: &mut Vec<Triangle3d>) {
     tris.par_iter_mut()
         .for_each(|tri| tri.translate(-bounds.p1.pos.x, -bounds.p1.pos.y, -bounds.p2.pos.z));
     //.for_each(|tri| tri.translate(-bounds.p1.pos.x, -bounds.p1.pos.y, 0.));
-}
-
-#[cfg_attr(feature = "python", pyclass)]
-/// Tool for CAM operations, represented as a point cloud
-#[derive(Default, Clone)]
-pub struct Tool {
-    pub bbox: Line3d,
-    pub diameter: f32,
-    pub points: Vec<Point3d>,
-}
-
-impl Tool {
-    pub fn new_endmill(diameter: f32, scale: f32) -> Tool {
-        let radius = diameter / 2.;
-        let circle = Circle::new(Point3d::new(0., 0., 0.), radius);
-        let points = Tool::circle_to_points(&circle, scale);
-        Tool {
-            bbox: circle.bbox(),
-            diameter,
-            points,
-        }
-    }
-
-    pub fn new_v_bit(diameter: f32, angle: f32, scale: f32) -> Tool {
-        let radius = diameter / 2.;
-        let circle = Circle::new(Point3d::new(0., 0., 0.), radius);
-        let percent = (90. - (angle / 2.)).to_radians().tan();
-        let points = Tool::circle_to_points(&circle, scale);
-        let points = points
-            .iter()
-            .map(|point| {
-                let distance = (point.pos.x.powi(2) + point.pos.y.powi(2)).sqrt();
-                let z = distance * percent;
-                Point3d::new(point.pos.x, point.pos.y, z)
-            })
-            .collect();
-        Tool {
-            bbox: circle.bbox(),
-            diameter,
-            points,
-        }
-    }
-
-    // TODO: this approximates a ball end mill, probably want to generate the
-    // geometry better
-    pub fn new_ball(diameter: f32, scale: f32) -> Tool {
-        let radius = diameter / 2.;
-        let circle = Circle::new(Point3d::new(0., 0., 0.), radius);
-        let points = Tool::circle_to_points(&circle, scale);
-        let points = points
-            .iter()
-            .map(|point| {
-                let distance = (point.pos.x.powi(2) + point.pos.y.powi(2)).sqrt();
-                let z = if distance > 0. {
-                    // 65. is the angle
-                    radius + (-radius * (65. / (radius / distance)).to_radians().cos())
-                } else {
-                    0.
-                };
-                Point3d::new(point.pos.x, point.pos.y, z)
-            })
-            .collect();
-        Tool {
-            bbox: circle.bbox(),
-            diameter,
-            points,
-        }
-    }
-
-    pub fn circle_to_points(circle: &Circle, scale: f32) -> Vec<Point3d> {
-        let mut points: Vec<Point3d> = (0..=(circle.radius * scale) as i32)
-            .flat_map(|x| {
-                (0..=(circle.radius * scale) as i32).flat_map(move |y| {
-                    vec![
-                        Point3d::new(-x as f32 / scale, y as f32 / scale, 0.0),
-                        Point3d::new(-x as f32 / scale, -y as f32 / scale, 0.0),
-                        Point3d::new(x as f32 / scale, -y as f32 / scale, 0.0),
-                        Point3d::new(x as f32 / scale, y as f32 / scale, 0.0),
-                    ]
-                })
-            })
-            .filter(|x| circle.in_2d_bounds(&x))
-            .collect();
-        points.sort();
-        points.dedup();
-        points
-    }
 }
 
 pub struct Grid {
