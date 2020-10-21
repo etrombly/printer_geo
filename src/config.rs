@@ -96,7 +96,7 @@ pub struct Opt {
     #[structopt(short, long, default_value="0.05", parse(try_from_str = parse_resolution))]
     pub resolution: f32,
 
-    #[structopt(short, long, default_value="340282300000000000000000000000000000000")]
+    #[structopt(short, long, default_value = "340282300000000000000000000000000000000")]
     pub stepdown: f32,
 
     #[structopt(short, long, possible_values = &ToolType::variants(), default_value="endmill", case_insensitive = true)]

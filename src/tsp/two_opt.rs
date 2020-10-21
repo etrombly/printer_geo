@@ -58,7 +58,6 @@ pub fn optimize_kopt(islands: &[Vec<Vec<Point3d>>], start: &Point3d) -> Vec<Vec<
     }
     println!("end: {:?}", best_distance);
     results
-    
 }
 
 /// Create new path for kopt

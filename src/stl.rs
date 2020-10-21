@@ -17,7 +17,13 @@ pub struct Triangle {
 
 impl Triangle {
     pub fn new(v1: [f32; 3], v2: [f32; 3], v3: [f32; 3]) -> Triangle {
-        Triangle {normal: [0.,0.,0.], v1, v2, v3, attr_byte_count: 0}
+        Triangle {
+            normal: [0., 0., 0.],
+            v1,
+            v2,
+            v3,
+            attr_byte_count: 0,
+        }
     }
 }
 
@@ -42,7 +48,10 @@ pub struct BinaryStlHeader {
 
 impl BinaryStlHeader {
     pub fn new(num_triangles: u32) -> BinaryStlHeader {
-        BinaryStlHeader{header: [0_u8;80], num_triangles}
+        BinaryStlHeader {
+            header: [0_u8; 80],
+            num_triangles,
+        }
     }
 }
 
@@ -54,16 +63,16 @@ pub struct BinaryStlFile {
 impl BinaryStlFile {
     pub fn new(triangles: Vec<Triangle>) -> BinaryStlFile {
         let header = BinaryStlHeader::new(triangles.len() as u32);
-        BinaryStlFile{header, triangles}
+        BinaryStlFile { header, triangles }
     }
 
     pub fn to_bytes<T: WriteBytesExt>(&self, out: &mut T) -> Result<()> {
         assert_eq!(self.header.num_triangles as usize, self.triangles.len());
-    
+
         // write the header.
         out.write_all(&self.header.header)?;
         out.write_u32::<LittleEndian>(self.header.num_triangles)?;
-    
+
         // write all the triangles
         for t in &self.triangles {
             write_point(out, t.normal)?;
@@ -72,7 +81,7 @@ impl BinaryStlFile {
             write_point(out, t.v3)?;
             out.write_u16::<LittleEndian>(t.attr_byte_count)?;
         }
-    
+
         Ok(())
     }
 }
@@ -160,6 +169,9 @@ pub fn to_triangles3d(file: &BinaryStlFile) -> Vec<Triangle3d> {
 }
 
 pub fn from_triangles3d(tris: &[Triangle3d]) -> BinaryStlFile {
-    let triangles: Vec<_> = tris.iter().map(|tri| Triangle::new(tri.p1.into(), tri.p2.into(), tri.p3.into())).collect();
+    let triangles: Vec<_> = tris
+        .iter()
+        .map(|tri| Triangle::new(tri.p1.into(), tri.p2.into(), tri.p3.into()))
+        .collect();
     BinaryStlFile::new(triangles)
 }

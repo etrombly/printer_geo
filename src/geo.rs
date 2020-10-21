@@ -3,8 +3,10 @@
 //! Collection of geometric types and functions useful for 3d models and CAM
 //! mostly wraps ultraviolet types with some additional functionality
 
-use crate::vulkan::{compute::intersect_tris, vkstate::VulkanState};
-use crate::stl::*;
+use crate::{
+    stl::*,
+    vulkan::{compute::intersect_tris, vkstate::VulkanState},
+};
 use float_cmp::approx_eq;
 #[cfg(feature = "python")]
 use pyo3::prelude::*;
@@ -50,10 +52,8 @@ impl Point3d {
     }
 }
 
-impl From<Point3d> for [f32;3] {
-    fn from(point: Point3d) -> Self {
-        [point[0], point[1], point[2]]
-    }
+impl From<Point3d> for [f32; 3] {
+    fn from(point: Point3d) -> Self { [point[0], point[1], point[2]] }
 }
 
 impl fmt::Display for Point3d {
@@ -549,6 +549,7 @@ pub struct Circle {
 
 impl Circle {
     pub fn new(center: Point3d, radius: f32) -> Circle { Circle { center, radius } }
+
     /// Check if point is in circle,
     /// ignoring Z axis
     ///
@@ -641,7 +642,7 @@ pub fn move_to_zero(tris: &mut Vec<Triangle3d>) {
     let bounds = get_bounds(tris);
     tris.par_iter_mut()
         .for_each(|tri| tri.translate(-bounds.p1.pos.x, -bounds.p1.pos.y, -bounds.p2.pos.z));
-        //.for_each(|tri| tri.translate(-bounds.p1.pos.x, -bounds.p1.pos.y, 0.));
+    //.for_each(|tri| tri.translate(-bounds.p1.pos.x, -bounds.p1.pos.y, 0.));
 }
 
 #[cfg_attr(feature = "python", pyclass)]
@@ -990,8 +991,16 @@ pub fn heightmap_to_stl(map: &[Vec<Point3d>]) -> Result<Vec<u8>, std::io::Error>
     let mut tris = Vec::new();
     for column in 0..map.len() - 1 {
         for row in 1..map[column].len() - 1 {
-            tris.push(Triangle3d{p1:map[column][row], p2: map[column][row-1], p3: map[column+1][row-1]});
-            tris.push(Triangle3d{p1:map[column][row], p2: map[column+1][row], p3: map[column+1][row-1]});
+            tris.push(Triangle3d {
+                p1: map[column][row],
+                p2: map[column][row - 1],
+                p3: map[column + 1][row - 1],
+            });
+            tris.push(Triangle3d {
+                p1: map[column][row],
+                p2: map[column + 1][row],
+                p3: map[column + 1][row - 1],
+            });
         }
     }
     from_triangles3d(&tris).to_bytes(&mut output)?;
