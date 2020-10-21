@@ -40,6 +40,14 @@ impl Point3d {
     pub fn cross(&self, other: &Point3d) -> Point3d { self.pos.cross(other.pos).into() }
 
     pub fn dot(&self, other: &Point3d) -> f32 { self.pos.dot(other.pos) }
+
+    pub fn round_precision(&mut self, precision: usize) {
+        let scale = 10_f32.powi(precision as i32);
+        let x = (self[0] * scale).round() / scale;
+        let y = (self[1] * scale).round() / scale;
+        let z = (self[2] * scale).round() / scale;
+        self.pos = Vec3::new(x, y, z);
+    }
 }
 
 impl From<Point3d> for [f32;3] {

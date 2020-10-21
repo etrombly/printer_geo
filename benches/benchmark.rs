@@ -1,10 +1,11 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use printer_geo::{geo::*, stl::*};
-use rayon::prelude::*;
+//use printer_geo::{geo::*, stl::*};
+//use rayon::prelude::*;
 
-/*
+
 // TODO: update benchmarks
-pub fn criterion_benchmark(c: &mut Criterion) {
+pub fn criterion_benchmark(_c: &mut Criterion) {
+    /*
     let stl = load_stl("3DBenchy.stl");
     let triangles = to_triangles3d(&stl);
     let tri_vk = to_tri_vk(&triangles);
@@ -20,8 +21,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             let _bboxes: Vec<Line3d> = triangles.par_iter().map(|x| x.bbox()).collect();
         })
     });
+    */
 }
 
 criterion_group!(benches, criterion_benchmark);
 criterion_main!(benches);
-*/
+

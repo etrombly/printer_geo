@@ -56,7 +56,7 @@ bool ray_tri_intersect(in vec3 origin, in vec3 p1, in vec3 p2, in vec3 p3, out i
 
     float T = U * A[2] + V * B[2] + W * C[2];
     float rcpDet = 1.0 / det;
-    hit = int((origin[2] + (T * rcpDet)) * 100000);
+    hit = int((origin[2] + (T * rcpDet)) * 1000000);
     return true;
 }
 
@@ -68,7 +68,7 @@ void main() {
     if(idx < tris.tri.length() && idy < points.point.length()) {
         int hit = 0;
         // convert from floats to vecs
-        vec3 origin = vec3(points.point[idy].x, points.point[idy].y, float(points.point[idy].z) / 100000);
+        vec3 origin = vec3(points.point[idy].x, points.point[idy].y, float(points.point[idy].z) / 1000000);
         vec3 p1 = vec3(tris.tri[idx].p1x, tris.tri[idx].p1y, tris.tri[idx].p1z);
         vec3 p2 = vec3(tris.tri[idx].p2x, tris.tri[idx].p2y, tris.tri[idx].p2z);
         vec3 p3 = vec3(tris.tri[idx].p3x, tris.tri[idx].p3y, tris.tri[idx].p3z);
