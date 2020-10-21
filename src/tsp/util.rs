@@ -8,10 +8,10 @@ use crate::geo::{distance, Point3d};
 /// use printer_geo::geo::Point3d;
 /// use printer_geo::tsp::util::*;
 /// # let islands = gen_islands();
-/// let path = vec![0, 1, 2, 3];
+/// let path = vec![0, 1, 2, 3, 4];
 /// let start_end = gen_start_end(&islands);
 /// let len = tour_len(&islands, &path, &start_end, &Point3d::new(0.,0.,0.));
-/// # assert_eq!(7.4142137, len);
+/// # assert_eq!(14.40493, len);
 /// ```
 pub fn tour_len(
     islands: &[Vec<Vec<Point3d>>],
@@ -157,19 +157,65 @@ pub fn gen_start_end(islands: &[Vec<Vec<Point3d>>]) -> Vec<Vec<(usize, usize, us
 pub fn gen_islands() -> Vec<Vec<Vec<Point3d>>> {
     let mut islands = Vec::new();
 
-    for x in &[1., 4., 7., 10., 13., 16.] {
-        let mut island = Vec::new();
-        island.push(vec![
-            Point3d::new(*x, 1., 1.),
-            Point3d::new(*x, 2., 1.),
-            Point3d::new(*x, 3., 1.),
-        ]);
-        island.push(vec![
-            Point3d::new(x + 1., 1., 1.),
-            Point3d::new(x + 1., 2., 1.),
-            Point3d::new(x + 1., 3., 1.),
-        ]);
-        islands.push(island);
-    }
+    islands.push(vec![
+        vec![
+            Point3d::new(1., 1., 1.),
+            Point3d::new(1., 2., 1.),
+            Point3d::new(1., 3., 1.),
+        ],
+        vec![
+            Point3d::new(2., 1., 1.),
+            Point3d::new(2., 2., 1.),
+            Point3d::new(2., 3., 1.),
+        ],
+    ]);
+    islands.push(vec![
+        vec![
+            Point3d::new(4., 6., 1.),
+            Point3d::new(4., 7., 1.),
+            Point3d::new(4., 8., 1.),
+        ],
+        vec![
+            Point3d::new(5., 6., 1.),
+            Point3d::new(5., 7., 1.),
+            Point3d::new(5., 8., 1.),
+        ],
+    ]);
+    islands.push(vec![
+        vec![
+            Point3d::new(7., 1., 1.),
+            Point3d::new(7., 2., 1.),
+            Point3d::new(7., 3., 1.),
+        ],
+        vec![
+            Point3d::new(8., 1., 1.),
+            Point3d::new(8., 2., 1.),
+            Point3d::new(8., 3., 1.),
+        ],
+    ]);
+    islands.push(vec![
+        vec![
+            Point3d::new(10., 1., 1.),
+            Point3d::new(10., 2., 1.),
+            Point3d::new(10., 3., 1.),
+        ],
+        vec![
+            Point3d::new(11., 1., 1.),
+            Point3d::new(11., 2., 1.),
+            Point3d::new(11., 3., 1.),
+        ],
+    ]);
+    islands.push(vec![
+        vec![
+            Point3d::new(13., 1., 1.),
+            Point3d::new(13., 2., 1.),
+            Point3d::new(13., 3., 1.),
+        ],
+        vec![
+            Point3d::new(14., 1., 1.),
+            Point3d::new(14., 2., 1.),
+            Point3d::new(14., 3., 1.),
+        ],
+    ]);
     islands
 }

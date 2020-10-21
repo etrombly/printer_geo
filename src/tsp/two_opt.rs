@@ -13,10 +13,14 @@ use rayon::prelude::*;
 /// use printer_geo::geo::Point3d;
 /// # use printer_geo::tsp::{nn::*, util::*};
 /// # let islands = gen_islands();
-/// let islands_unordered = vec![islands[2].clone(), islands[1].clone(), islands[3].clone(), islands[0].clone(), islands[4].clone(), islands[5].clone()];
+/// let islands_unordered = vec![islands[2].clone(), islands[1].clone(), islands[3].clone(), islands[0].clone(), islands[4].clone()];
 /// let islands_opt = optimize_kopt(&islands_unordered, &Point3d::new(0.,0.,0.));
 /// # let islands = nn(&islands, Point3d::new(0.,0.,0.));
-/// # assert_eq!(islands_opt, islands);
+/// # let start_end = gen_start_end(&islands);
+/// # let nn_len = tour_len(&islands, &[0,1,2,3,4], &start_end, &Point3d::new(0.,0.,0.));
+/// # let start_end = gen_start_end(&islands_opt);
+/// # let opt_len = tour_len(&islands_opt, &[0,1,2,3,4], &start_end, &Point3d::new(0.,0.,0.));
+/// # assert!(opt_len < nn_len);
 /// ```
 pub fn optimize_kopt(islands: &[Vec<Vec<Point3d>>], start: &Point3d) -> Vec<Vec<Vec<Point3d>>> {
     let islands = nn(islands, *start);
@@ -30,7 +34,6 @@ pub fn optimize_kopt(islands: &[Vec<Vec<Point3d>>], start: &Point3d) -> Vec<Vec<
     let mut improve = true;
     let mut start_end = gen_start_end(&results);
     let mut best_distance = tour_len(&results, &path, &start_end, start);
-    println!("start {:?}", best_distance);
     while improve {
         improve = false;
         path = (0..size).into_iter().collect();
@@ -56,7 +59,6 @@ pub fn optimize_kopt(islands: &[Vec<Vec<Point3d>>], start: &Point3d) -> Vec<Vec<
         }
         results = path.iter().map(|x| results[*x].clone()).collect();
     }
-    println!("end: {:?}", best_distance);
     results
 }
 
