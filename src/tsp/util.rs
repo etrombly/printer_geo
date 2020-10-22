@@ -7,7 +7,7 @@ use crate::geo::{distance, Point3d};
 /// ```
 /// use printer_geo::geo::Point3d;
 /// use printer_geo::tsp::util::*;
-/// # let islands = gen_islands();
+/// # let islands = __internal_gen_islands();
 /// let path = vec![0, 1, 2, 3, 4];
 /// let start_end = gen_start_end(&islands);
 /// let len = tour_len(&islands, &path, &start_end, &Point3d::new(0.,0.,0.));
@@ -51,7 +51,7 @@ pub fn tour_len(
 /// ```
 /// use printer_geo::geo::Point3d;
 /// use printer_geo::tsp::util::*;
-/// # let islands = gen_islands();
+/// # let islands = __internal_gen_islands();
 /// let exclude = Vec::new();
 /// let island = get_next_island(&islands, &exclude, &Point3d::new(0.,0.,0.));
 /// # assert_eq!((0, 0, 0, 1.4142135), island);
@@ -87,7 +87,7 @@ pub fn get_next_segment(segments: &[Vec<Point3d>], exclude: &[usize], last: &Poi
 /// ```
 /// use printer_geo::geo::Point3d;
 /// use printer_geo::tsp::util::*;
-/// # let islands = gen_islands();
+/// # let islands = __internal_gen_islands();
 /// let exclude = vec![0];
 /// let island = get_next_segment(&islands[0], &exclude, &Point3d::new(1.,1.,1.));
 /// # assert_eq!((1, 0, 1.0), island);
@@ -153,8 +153,10 @@ pub fn gen_start_end(islands: &[Vec<Vec<Point3d>>]) -> Vec<Vec<(usize, usize, us
     results
 }
 
+
 /// generate data for doc tests
-pub fn gen_islands() -> Vec<Vec<Vec<Point3d>>> {
+#[doc(hidden)]
+pub fn __internal_gen_islands() -> Vec<Vec<Vec<Point3d>>> {
     let mut islands = Vec::new();
 
     islands.push(vec![

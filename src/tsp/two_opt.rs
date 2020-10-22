@@ -12,7 +12,7 @@ use rayon::prelude::*;
 /// use printer_geo::tsp::two_opt::*;
 /// use printer_geo::geo::Point3d;
 /// # use printer_geo::tsp::{nn::*, util::*};
-/// # let islands = gen_islands();
+/// # let islands = __internal_gen_islands();
 /// let islands_unordered = vec![islands[2].clone(), islands[1].clone(), islands[3].clone(), islands[0].clone(), islands[4].clone()];
 /// let islands_opt = optimize_kopt(&islands_unordered, &Point3d::new(0.,0.,0.));
 /// # let islands = nn(&islands, Point3d::new(0.,0.,0.));
