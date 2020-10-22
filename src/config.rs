@@ -110,4 +110,10 @@ pub struct Opt {
 
     #[structopt(long)]
     pub toolnumber: Option<usize>,
+
+    #[structopt(long)]
+    pub speed: f32,
+
+    #[structopt(long)]
+    pub feedrate: f32,
 }
