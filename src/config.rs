@@ -41,27 +41,27 @@ impl ToolType {
 fn parse_stepover(src: &str) -> Result<f32, ConfigError> {
     let stepover = src.parse::<f32>()?;
     if (1. ..=100.).contains(&stepover) {
-        Err(ConfigError::StepOver)
-    } else {
         Ok(stepover)
+    } else {
+        Err(ConfigError::StepOver)
     }
 }
 
 fn parse_angle(src: &str) -> Result<f32, ConfigError> {
     let angle = src.parse::<f32>()?;
     if (1. ..=180.).contains(&angle) {
-        Err(ConfigError::Angle)
-    } else {
         Ok(angle)
+    } else {
+        Err(ConfigError::Angle)
     }
 }
 
 fn parse_resolution(src: &str) -> Result<f32, ConfigError> {
     let resolution = src.parse::<f32>()?;
     if (0.001..=1.).contains(&resolution) {
-        Err(ConfigError::Resolution)
-    } else {
         Ok(resolution)
+    } else {
+        Err(ConfigError::Resolution)
     }
 }
 
