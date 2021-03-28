@@ -40,7 +40,7 @@ impl ToolType {
 
 fn parse_stepover(src: &str) -> Result<f32, ConfigError> {
     let stepover = src.parse::<f32>()?;
-    if stepover < 1. || stepover > 100. {
+    if (1. ..=100.).contains(&stepover) {
         Err(ConfigError::StepOver)
     } else {
         Ok(stepover)
@@ -49,7 +49,7 @@ fn parse_stepover(src: &str) -> Result<f32, ConfigError> {
 
 fn parse_angle(src: &str) -> Result<f32, ConfigError> {
     let angle = src.parse::<f32>()?;
-    if angle < 1. || angle > 180. {
+    if (1. ..=180.).contains(&angle) {
         Err(ConfigError::Angle)
     } else {
         Ok(angle)
@@ -58,7 +58,7 @@ fn parse_angle(src: &str) -> Result<f32, ConfigError> {
 
 fn parse_resolution(src: &str) -> Result<f32, ConfigError> {
     let resolution = src.parse::<f32>()?;
-    if resolution < 0.001 || resolution > 1. {
+    if (0.001..=1.).contains(&resolution) {
         Err(ConfigError::Resolution)
     } else {
         Ok(resolution)

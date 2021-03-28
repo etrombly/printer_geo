@@ -1,10 +1,7 @@
 use crate::geo::*;
 use serde::Deserialize;
 
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
-use std::collections::HashMap;
+use std::{collections::HashMap, fs::File, io::BufReader, path::Path};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -17,7 +14,7 @@ pub enum ToolError {
     #[error("Tool type not supported")]
     InvalidTool,
     #[error("Couldn't read tool table")]
-    IO(#[from] std::io::Error),
+    Io(#[from] std::io::Error),
     #[error("Error parsing tool table")]
     Json(#[from] serde_json::Error),
 }
@@ -51,18 +48,23 @@ pub struct ToolParams {
 }
 
 impl Tool {
-    pub fn from_file<P: AsRef<Path>>(path: P, table: usize, tool_index: usize, scale: f32) -> Result<(Tool, f32), ToolError> {
+    pub fn from_file<P: AsRef<Path>>(
+        path: P,
+        table: usize,
+        tool_index: usize,
+        scale: f32,
+    ) -> Result<(Tool, f32), ToolError> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         let tool_index = tool_index.to_string();
-    
+
         // Read the JSON contents of the file as an instance of `User`.
         let t: Vec<ToolTable> = serde_json::from_reader(reader)?;
 
         if t.len() < table {
             return Err(ToolError::Table);
         }
-        if !t[table - 1].tools.contains_key(&tool_index){
+        if !t[table - 1].tools.contains_key(&tool_index) {
             return Err(ToolError::ToolIndex);
         }
         let diameter = t[table - 1].tools[&tool_index].diameter;
@@ -71,7 +73,7 @@ impl Tool {
             // TODO: support angle for ball endmill
             "BallEndMill" => Tool::new_ball(diameter, scale),
             "Engraver" => Tool::new_v_bit(diameter, t[table - 1].tools[&tool_index].angle.unwrap(), scale),
-            _ => return Err(ToolError::InvalidTool)
+            _ => return Err(ToolError::InvalidTool),
         };
         Ok((tool, diameter))
     }

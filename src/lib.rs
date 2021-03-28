@@ -9,8 +9,8 @@ pub mod vulkan;
 #[cfg(feature = "python")]
 pub mod python;
 pub mod stl;
-pub mod tsp;
 pub mod tool;
+pub mod tsp;
 
 #[cfg(feature = "python")]
 use crate::{python::compute_py::*, python::config_py::*, python::geo_py::*, python::stl_py::*};

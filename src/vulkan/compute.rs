@@ -28,7 +28,7 @@ pub enum ComputeError {
     #[error("Null string")]
     Nul(#[from] std::ffi::NulError),
     #[error("IO error")]
-    IO(#[from] std::io::Error),
+    Io(#[from] std::io::Error),
 }
 
 /// Calculate intersection of points and triangles
@@ -150,7 +150,7 @@ pub fn intersect_tris(
     let queue = unsafe { vk.device.get_device_queue(vk.queue_family_index, 0) };
     cmd_pool.submit(queue, Some(fence.fence));
 
-    while fence.status() == vkfence::FenceStates::UNSIGNALED {}
+    while fence.status() == vkfence::FenceStates::Unsignaled {}
 
     let output: Vec<Point3d> = memory
         .get_buffer::<(f32, f32, i32)>(&buffers[1])
@@ -283,7 +283,7 @@ pub fn partition_tris(
     let queue = unsafe { vk.device.get_device_queue(vk.queue_family_index, 0) };
     cmd_pool.submit(queue, Some(fence.fence));
 
-    while fence.status() == vkfence::FenceStates::UNSIGNALED {}
+    while fence.status() == vkfence::FenceStates::Unsignaled {}
 
     let dest_content = memory.get_buffer::<u32>(&buffers[2]);
 

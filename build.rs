@@ -4,7 +4,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum BuildError {
     #[error("IO error")]
-    IO(#[from] std::io::Error),
+    Io(#[from] std::io::Error),
     #[error("Shaderc error")]
     Shaderc(#[from] shaderc::Error),
     #[error("No filename for glsl")]

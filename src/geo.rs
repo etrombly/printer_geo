@@ -4,8 +4,8 @@
 //! mostly wraps ultraviolet types with some additional functionality
 
 use crate::{
-    tool::Tool,
     stl::*,
+    tool::Tool,
     vulkan::{compute::intersect_tris, vkstate::VulkanState},
 };
 use float_cmp::approx_eq;

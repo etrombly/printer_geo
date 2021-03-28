@@ -5,10 +5,10 @@ use crate::vulkan::vkstate::VulkanState;
 
 #[derive(Eq, PartialEq, Debug)]
 pub enum FenceStates {
-    SIGNALED,
-    UNSIGNALED,
-    LOST,
-    UNKNOWN,
+    Signaled,
+    Unsignaled,
+    Lost,
+    Unkown,
 }
 
 pub struct VkFence {
@@ -41,10 +41,10 @@ impl VkFence {
                 .get_fence_status(self.state.device.handle(), self.fence)
         };
         match status {
-            vk::Result::SUCCESS => FenceStates::SIGNALED,
-            vk::Result::NOT_READY => FenceStates::UNSIGNALED,
-            vk::Result::ERROR_DEVICE_LOST => FenceStates::LOST,
-            _ => FenceStates::UNKNOWN,
+            vk::Result::SUCCESS => FenceStates::Signaled,
+            vk::Result::NOT_READY => FenceStates::Unsignaled,
+            vk::Result::ERROR_DEVICE_LOST => FenceStates::Lost,
+            _ => FenceStates::Unkown,
         }
     }
 
@@ -61,10 +61,10 @@ impl VkFence {
         let res = unsafe { self.state.device.wait_for_fences(&[self.fence], true, timeout) };
 
         if res.is_ok() {
-            return FenceStates::SIGNALED;
+            return FenceStates::Signaled;
         }
 
-        FenceStates::UNSIGNALED
+        FenceStates::Unsignaled
     }
 }
 

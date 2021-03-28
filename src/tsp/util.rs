@@ -153,71 +153,69 @@ pub fn gen_start_end(islands: &[Vec<Vec<Point3d>>]) -> Vec<Vec<(usize, usize, us
     results
 }
 
-
 /// generate data for doc tests
 #[doc(hidden)]
 pub fn __internal_gen_islands() -> Vec<Vec<Vec<Point3d>>> {
-    let mut islands = Vec::new();
-
-    islands.push(vec![
+    vec![
         vec![
-            Point3d::new(1., 1., 1.),
-            Point3d::new(1., 2., 1.),
-            Point3d::new(1., 3., 1.),
+            vec![
+                Point3d::new(1., 1., 1.),
+                Point3d::new(1., 2., 1.),
+                Point3d::new(1., 3., 1.),
+            ],
+            vec![
+                Point3d::new(2., 1., 1.),
+                Point3d::new(2., 2., 1.),
+                Point3d::new(2., 3., 1.),
+            ],
         ],
         vec![
-            Point3d::new(2., 1., 1.),
-            Point3d::new(2., 2., 1.),
-            Point3d::new(2., 3., 1.),
-        ],
-    ]);
-    islands.push(vec![
-        vec![
-            Point3d::new(4., 6., 1.),
-            Point3d::new(4., 7., 1.),
-            Point3d::new(4., 8., 1.),
-        ],
-        vec![
-            Point3d::new(5., 6., 1.),
-            Point3d::new(5., 7., 1.),
-            Point3d::new(5., 8., 1.),
-        ],
-    ]);
-    islands.push(vec![
-        vec![
-            Point3d::new(7., 1., 1.),
-            Point3d::new(7., 2., 1.),
-            Point3d::new(7., 3., 1.),
+            vec![
+                Point3d::new(4., 6., 1.),
+                Point3d::new(4., 7., 1.),
+                Point3d::new(4., 8., 1.),
+            ],
+            vec![
+                Point3d::new(5., 6., 1.),
+                Point3d::new(5., 7., 1.),
+                Point3d::new(5., 8., 1.),
+            ],
         ],
         vec![
-            Point3d::new(8., 1., 1.),
-            Point3d::new(8., 2., 1.),
-            Point3d::new(8., 3., 1.),
-        ],
-    ]);
-    islands.push(vec![
-        vec![
-            Point3d::new(10., 1., 1.),
-            Point3d::new(10., 2., 1.),
-            Point3d::new(10., 3., 1.),
-        ],
-        vec![
-            Point3d::new(11., 1., 1.),
-            Point3d::new(11., 2., 1.),
-            Point3d::new(11., 3., 1.),
-        ],
-    ]);
-    islands.push(vec![
-        vec![
-            Point3d::new(13., 1., 1.),
-            Point3d::new(13., 2., 1.),
-            Point3d::new(13., 3., 1.),
+            vec![
+                Point3d::new(7., 1., 1.),
+                Point3d::new(7., 2., 1.),
+                Point3d::new(7., 3., 1.),
+            ],
+            vec![
+                Point3d::new(8., 1., 1.),
+                Point3d::new(8., 2., 1.),
+                Point3d::new(8., 3., 1.),
+            ],
         ],
         vec![
-            Point3d::new(14., 1., 1.),
-            Point3d::new(14., 2., 1.),
-            Point3d::new(14., 3., 1.),
+            vec![
+                Point3d::new(10., 1., 1.),
+                Point3d::new(10., 2., 1.),
+                Point3d::new(10., 3., 1.),
+            ],
+            vec![
+                Point3d::new(11., 1., 1.),
+                Point3d::new(11., 2., 1.),
+                Point3d::new(11., 3., 1.),
+            ],
         ],
-    ]);
-    islands
+        vec![
+            vec![
+                Point3d::new(13., 1., 1.),
+                Point3d::new(13., 2., 1.),
+                Point3d::new(13., 3., 1.),
+            ],
+            vec![
+                Point3d::new(14., 1., 1.),
+                Point3d::new(14., 2., 1.),
+                Point3d::new(14., 3., 1.),
+            ],
+        ],
+    ]
 }
